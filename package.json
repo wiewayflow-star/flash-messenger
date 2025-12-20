@@ -1,0 +1,24 @@
+{
+  "name": "flash-messenger",
+  "version": "1.0.0",
+  "description": "Flash - Modern Discord-like messenger",
+  "main": "backend/server-standalone.js",
+  "scripts": {
+    "start": "node backend/server-standalone.js",
+    "dev": "node backend/server-standalone.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.2",
+    "uuid": "^9.0.0",
+    "ws": "^8.14.2"
+  },
+  "keywords": ["messenger", "chat", "discord-clone", "websocket"],
+  "author": "",
+  "license": "MIT"
+}

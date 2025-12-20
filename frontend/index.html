@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flash</title>
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/animations.css">
+    <link rel="stylesheet" href="css/voice.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Auth Screen -->
+        <div id="auth-screen" class="screen active">
+            <div class="auth-container">
+                <div class="auth-logo">
+                    <svg viewBox="0 0 24 24" width="64" height="64">
+                        <path fill="currentColor" d="M13 3L4 14h7l-2 7 9-11h-7l2-7z"/>
+                    </svg>
+                    <h1>Flash</h1>
+                </div>
+                
+                <div class="auth-tabs">
+                    <button class="auth-tab active" data-tab="login">Вход</button>
+                    <button class="auth-tab" data-tab="register">Регистрация</button>
+                </div>
+
+                <form id="login-form" class="auth-form active">
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" name="email" required placeholder="your@email.com">
+                    </div>
+                    <div class="form-group">
+                        <label>Пароль</label>
+                        <input type="password" name="password" required placeholder="••••••••">
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">Войти</button>
+                </form>
+
+                <form id="register-form" class="auth-form">
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" name="email" required placeholder="your@email.com">
+                    </div>
+                    <div class="form-group">
+                        <label>Никнейм</label>
+                        <input type="text" name="username" required placeholder="FlashUser" minlength="2" maxlength="32">
+                    </div>
+                    <div class="form-group">
+                        <label>Пароль</label>
+                        <input type="password" name="password" required placeholder="••••••••" minlength="6">
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">Создать аккаунт</button>
+                </form>
+
+                <div id="auth-error" class="auth-error"></div>
+            </div>
+        </div>
+
+        <!-- Main App -->
+        <div id="main-screen" class="screen">
+            <!-- Server Sidebar -->
+            <nav class="server-sidebar">
+                <div class="server-icon home-icon active" data-server="home" title="Главная">
+                    <svg viewBox="0 0 24 24" width="24" height="24">
+                        <path fill="currentColor" d="M13 3L4 14h7l-2 7 9-11h-7l2-7z"/>
+                    </svg>
+                </div>
+                <div class="sidebar-divider"></div>
+                <div id="server-list"></div>
+                <div class="server-icon add-server" title="Создать сервер">
+                    <svg viewBox="0 0 24 24" width="24" height="24">
+                        <path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                    </svg>
+                </div>
+                <div class="server-icon join-server" title="Присоединиться к серверу">
+                    <svg viewBox="0 0 24 24" width="24" height="24">
+                        <path fill="currentColor" d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+                    </svg>
+                </div>
+            </nav>
+
+            <!-- Channel Sidebar -->
+            <aside class="channel-sidebar">
+                <div class="channel-header">
+                    <h2 id="server-name">Flash</h2>
+                </div>
+                <div class="channel-list" id="channel-list"></div>
+                <div class="user-panel">
+                    <div class="user-info">
+                        <div class="user-avatar" id="user-avatar"></div>
+                        <div class="user-details">
+                            <span class="username" id="user-name">User</span>
+                            <span class="user-tag" id="user-tag">#0000</span>
+                        </div>
+                    </div>
+                    <div class="user-controls">
+                        <button class="icon-btn" id="settings-btn" title="Настройки">
+                            <svg viewBox="0 0 24 24" width="20" height="20">
+                                <path fill="currentColor" d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Main Content -->
+            <main class="main-content">
+                <header class="content-header">
+                    <div class="channel-info">
+                        <span class="channel-hash" id="channel-hash">#</span>
+                        <span class="channel-name" id="current-channel-name">общий</span>
+                    </div>
+                    <div class="header-actions">
+                        <button class="icon-btn" id="members-toggle" title="Участники">
+                            <svg viewBox="0 0 24 24" width="24" height="24">
+                                <path fill="currentColor" d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+                            </svg>
+                        </button>
+                        <button class="icon-btn" id="search-users-btn" title="Найти людей">
+                            <svg viewBox="0 0 24 24" width="24" height="24">
+                                <path fill="currentColor" d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </header>
+
+                <div class="content-body">
+                    <div class="messages-container" id="messages-container">
+                        <div class="messages-list" id="messages-list"></div>
+                    </div>
+
+                    <div class="members-sidebar" id="members-sidebar">
+                        <h3>Участники</h3>
+                        <div class="members-list" id="members-list"></div>
+                    </div>
+                </div>
+
+                <div class="message-input-container">
+                    <div class="typing-indicator" id="typing-indicator"></div>
+                    <form class="message-form" id="message-form">
+                        <div class="input-wrapper">
+                            <button type="button" class="icon-btn attach-btn">
+                                <svg viewBox="0 0 24 24" width="24" height="24">
+                                    <path fill="currentColor" d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-1.38 1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5c0 1.38 1.12 2.5 2.5 2.5s2.5-1.12 2.5-2.5V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z"/>
+                                </svg>
+                            </button>
+                            <input type="text" id="message-input" placeholder="Написать сообщение..." autocomplete="off">
+                            <div class="input-actions">
+                                <button type="button" class="icon-btn emoji-btn" id="emoji-btn">😊</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </main>
+        </div>
+    </div>
+
+
+    <!-- Modals -->
+    <div class="modal" id="create-server-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Создать сервер</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <form id="create-server-form">
+                <div class="form-group">
+                    <label>Название сервера</label>
+                    <input type="text" name="name" required placeholder="Мой сервер" minlength="2">
+                </div>
+                <div class="form-group">
+                    <label>Описание (опционально)</label>
+                    <textarea name="description" placeholder="О чём этот сервер?"></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary modal-cancel">Отмена</button>
+                    <button type="submit" class="btn btn-primary">Создать</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal" id="settings-modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2>Настройки</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="settings-container">
+                <div class="settings-sidebar">
+                    <button class="settings-tab active" data-section="account">Аккаунт</button>
+                    <button class="settings-tab" data-section="security">Безопасность</button>
+                    <button class="settings-tab" data-section="appearance">Внешний вид</button>
+                    <button class="settings-tab" data-section="flash-mode">Flash Mode</button>
+                    <div class="settings-divider"></div>
+                    <button class="settings-tab danger" id="logout-btn">Выйти</button>
+                </div>
+                <div class="settings-content">
+                    <div class="settings-section active" data-section="account">
+                        <h3>Мой аккаунт</h3>
+                        <div class="profile-card">
+                            <div class="profile-banner" id="settings-banner" style="cursor: pointer;" title="Нажмите чтобы изменить баннер">
+                                <div class="banner-overlay">
+                                    <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                                </div>
+                                <input type="file" id="banner-file-input" accept="image/*" style="display: none;">
+                            </div>
+                            <div class="profile-info">
+                                <div class="profile-avatar-wrapper">
+                                    <div class="profile-avatar" id="settings-avatar" style="cursor: pointer;" title="Нажмите чтобы изменить аватар">
+                                        <div class="avatar-overlay">
+                                            <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                                        </div>
+                                    </div>
+                                    <input type="file" id="avatar-file-input" accept="image/*" style="display: none;">
+                                </div>
+                                <div class="profile-details">
+                                    <span class="profile-name" id="settings-username">User</span>
+                                    <span class="profile-tag" id="settings-tag">#0000</span>
+                                </div>
+                            </div>
+                        </div>
+                        <form id="profile-form">
+                            <div class="form-group">
+                                <label>Никнейм</label>
+                                <input type="text" name="username" id="profile-username">
+                            </div>
+                            <div class="form-group">
+                                <label>О себе</label>
+                                <textarea name="bio" id="profile-bio" placeholder="Расскажите о себе..."></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>Статус</label>
+                                <select name="status" id="profile-status">
+                                    <option value="online">Онлайн</option>
+                                    <option value="idle">Не на месте</option>
+                                    <option value="dnd">Не беспокоить</option>
+                                    <option value="offline">Невидимый</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Сохранить</button>
+                        </form>
+                    </div>
+                    <div class="settings-section" data-section="security">
+                        <h3>Безопасность</h3>
+                        <form id="password-form">
+                            <div class="form-group">
+                                <label>Текущий пароль</label>
+                                <input type="password" name="currentPassword" id="current-password" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Новый пароль</label>
+                                <input type="password" name="newPassword" id="new-password" minlength="6" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Подтвердите новый пароль</label>
+                                <input type="password" name="confirmPassword" id="confirm-password" minlength="6" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Изменить пароль</button>
+                            <p id="password-message" style="margin-top: 10px; font-size: 13px;"></p>
+                        </form>
+                    </div>
+                    <div class="settings-section" data-section="appearance">
+                        <h3>Внешний вид</h3>
+                        <div class="setting-item">
+                            <label>Анимации</label>
+                            <input type="checkbox" id="setting-animations" checked>
+                        </div>
+                        <div class="setting-item">
+                            <label>Glow эффекты</label>
+                            <input type="checkbox" id="setting-glow" checked>
+                        </div>
+                        <div class="setting-item">
+                            <label>Динамический фон</label>
+                            <input type="checkbox" id="setting-dynamic-bg" checked>
+                        </div>
+                    </div>
+                    <div class="settings-section" data-section="flash-mode">
+                        <h3>Flash Mode</h3>
+                        <p>Режим ультра-минимализма для максимального фокуса на чате.</p>
+                        <button class="btn btn-primary" id="toggle-flash-mode">Включить Flash Mode</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Image Editor Modal -->
+    <div class="modal" id="image-editor-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="editor-title">Редактировать изображение</h2>
+                <button class="modal-close" onclick="ImageEditor.cancel()">&times;</button>
+            </div>
+            <div class="editor-body">
+                <div class="editor-canvas-container avatar-mode" id="editor-canvas-container">
+                    <canvas id="editor-canvas"></canvas>
+                </div>
+                
+                <div class="editor-zoom-controls">
+                    <div class="editor-zoom-icon">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14zM7 9h5v1H7z"/></svg>
+                    </div>
+                    <input type="range" id="editor-zoom-slider" min="0" max="100" value="50" oninput="ImageEditor.setScale(this.value)">
+                    <div class="editor-zoom-icon">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14zm-2-4h1V8h2V7H8v2h1v1z"/><path d="M12 9h-2v1h2z"/></svg>
+                    </div>
+                </div>
+                
+                <div class="editor-actions">
+                    <button class="editor-reset-btn" onclick="ImageEditor.reset()">Сброс</button>
+                    <div class="editor-buttons">
+                        <button class="editor-btn editor-btn-cancel" onclick="ImageEditor.cancel()">Отмена</button>
+                        <button class="editor-btn editor-btn-save" onclick="ImageEditor.save()">Применить</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="user-profile-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Профиль пользователя</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="user-profile-view">
+                <div class="profile-banner"></div>
+                <div class="profile-info">
+                    <div class="profile-avatar-large" id="profile-view-avatar"></div>
+                    <div class="profile-name-section">
+                        <h3 id="profile-view-username">Username</h3>
+                        <span id="profile-view-tag">#0000</span>
+                    </div>
+                    <div class="profile-bio" id="profile-view-bio"></div>
+                    <div class="profile-meta">
+                        <div class="meta-item">
+                            <span class="meta-label">Статус:</span>
+                            <span id="profile-view-status">Онлайн</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">Дата регистрации:</span>
+                            <span id="profile-view-created"></span>
+                        </div>
+                    </div>
+                    <div class="profile-actions">
+                        <button class="btn btn-success" id="add-friend-btn">Добавить в друзья</button>
+                        <button class="btn btn-danger modal-cancel">Закрыть</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="search-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Найти людей</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="search-container">
+                <input type="text" id="user-search-input" placeholder="@username#0001 или просто имя...">
+                <div class="search-results" id="search-results"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="emoji-picker">
+        <div class="emoji-grid">
+            <span class="emoji-item">😀</span><span class="emoji-item">😃</span><span class="emoji-item">😄</span>
+            <span class="emoji-item">😁</span><span class="emoji-item">😅</span><span class="emoji-item">😂</span>
+            <span class="emoji-item">🤣</span><span class="emoji-item">😊</span><span class="emoji-item">😇</span>
+            <span class="emoji-item">🙂</span><span class="emoji-item">😉</span><span class="emoji-item">😍</span>
+            <span class="emoji-item">🥰</span><span class="emoji-item">😘</span><span class="emoji-item">😋</span>
+            <span class="emoji-item">😎</span><span class="emoji-item">🤩</span><span class="emoji-item">🥳</span>
+            <span class="emoji-item">😏</span><span class="emoji-item">😒</span><span class="emoji-item">😞</span>
+            <span class="emoji-item">😔</span><span class="emoji-item">😟</span><span class="emoji-item">😕</span>
+            <span class="emoji-item">🙁</span><span class="emoji-item">😣</span><span class="emoji-item">😖</span>
+            <span class="emoji-item">😫</span><span class="emoji-item">😩</span><span class="emoji-item">🥺</span>
+            <span class="emoji-item">😢</span><span class="emoji-item">😭</span><span class="emoji-item">😤</span>
+            <span class="emoji-item">😠</span><span class="emoji-item">😡</span><span class="emoji-item">🤬</span>
+            <span class="emoji-item">👍</span><span class="emoji-item">👎</span><span class="emoji-item">👏</span>
+            <span class="emoji-item">🙌</span><span class="emoji-item">🤝</span><span class="emoji-item">❤️</span>
+            <span class="emoji-item">🔥</span><span class="emoji-item">⚡</span><span class="emoji-item">✨</span>
+        </div>
+    </div>
+
+    <div class="modal" id="join-server-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Присоединиться к серверу</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <form id="join-server-form">
+                <div class="form-group">
+                    <label>Код приглашения</label>
+                    <input type="text" name="code" required placeholder="Например: ABC123XY" style="text-transform: uppercase;">
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary modal-cancel">Отмена</button>
+                    <button type="submit" class="btn btn-primary">Присоединиться</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/store.js"></script>
+    <script src="js/crypto.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/websocket.js"></script>
+    <script src="js/components.js"></script>
+    <script src="js/voice.js"></script>
+    <script src="js/image-editor.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
