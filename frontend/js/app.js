@@ -1217,7 +1217,7 @@ const App = {
     goBackFromFriends() {
         // Hide chat area
         Utils.$('.main-content')?.classList.add('no-chat');
-        Utils.$('#channel-name').textContent = '';
+        Utils.$('#current-channel-name').textContent = '';
         
         // Show message input back (in case it was hidden)
         Utils.$('.message-input-container')?.style.setProperty('display', '');
@@ -1231,7 +1231,7 @@ const App = {
         Utils.$('.main-content')?.classList.remove('no-chat');
         
         // Update header with back arrow
-        Utils.$('#channel-name').innerHTML = `
+        Utils.$('#current-channel-name').innerHTML = `
             <span class="back-arrow" onclick="App.goBackFromFriends()" style="cursor: pointer; margin-right: 8px; opacity: 0.7;">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M19 12H5M12 19l-7-7 7-7"/>
