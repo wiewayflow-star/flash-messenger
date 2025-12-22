@@ -431,8 +431,21 @@ const Voice = {
             // Stop screen sharing
             if (this.screenStream) {
                 this.screenStream.getTracks().forEach(track => track.stop());
-                this.screenStream = null;
             }
+            
+            // Remove video track from peers
+            for (const [peerId, peer] of this.peers) {
+                if (peer.screenSender) {
+                    try {
+                        peer.connection.removeTrack(peer.screenSender);
+                        peer.screenSender = null;
+                    } catch (e) {
+                        console.error('[Voice] Failed to remove screen track:', e);
+                    }
+                }
+            }
+            
+            this.screenStream = null;
             this.isScreenSharing = false;
             
             // Remove screen share video element
@@ -446,13 +459,6 @@ const Voice = {
             }
             
             this.updateCallUIButtons();
-            
-            // Notify peer that screen share stopped
-            if (this.currentCall) {
-                WS.send('screen_share_stop', {
-                    dmId: this.currentCall.dmId
-                });
-            }
         } else {
             // Start screen sharing
             try {
@@ -469,6 +475,17 @@ const Voice = {
                 // Handle when user stops sharing via browser UI
                 screenTrack.onended = () => {
                     this.isScreenSharing = false;
+                    
+                    // Remove video track from peers
+                    for (const [peerId, peer] of this.peers) {
+                        if (peer.screenSender) {
+                            try {
+                                peer.connection.removeTrack(peer.screenSender);
+                                peer.screenSender = null;
+                            } catch (e) {}
+                        }
+                    }
+                    
                     this.screenStream = null;
                     const screenVideo = document.getElementById('screen-share-video');
                     if (screenVideo) screenVideo.remove();
@@ -477,24 +494,24 @@ const Voice = {
                         callContainer.classList.remove('has-screen-share');
                     }
                     this.updateCallUIButtons();
-                    
-                    // Notify peer
-                    if (this.currentCall) {
-                        WS.send('screen_share_stop', {
-                            dmId: this.currentCall.dmId
-                        });
-                    }
                 };
                 
                 // Show local preview of screen share
                 this.showScreenSharePreview(this.screenStream);
                 
+                // Add video track to peer connections
+                for (const [peerId, peer] of this.peers) {
+                    try {
+                        // Add screen track
+                        peer.screenSender = peer.connection.addTrack(screenTrack, this.screenStream);
+                        console.log('[Voice] Added screen track to peer:', peerId);
+                    } catch (e) {
+                        console.error('[Voice] Failed to add screen track:', e);
+                    }
+                }
+                
                 this.isScreenSharing = true;
                 this.updateCallUIButtons();
-                
-                // For now, just show local preview - full WebRTC screen share needs more work
-                // to avoid breaking audio. This is a simplified version.
-                console.log('[Voice] Screen sharing started (local preview only for now)');
                 
             } catch (e) {
                 console.error('[Voice] Failed to share screen:', e);
@@ -616,6 +633,25 @@ const Voice = {
             }
             if (connection.connectionState === 'disconnected' || connection.connectionState === 'failed') {
                 this.closePeer(peerId);
+            }
+        };
+
+        // Handle negotiation needed (for adding screen share track)
+        connection.onnegotiationneeded = async () => {
+            console.log('[Voice] Negotiation needed for peer:', peerId);
+            // Only renegotiate if we're already connected
+            if (connection.signalingState === 'stable') {
+                try {
+                    const offer = await connection.createOffer();
+                    await connection.setLocalDescription(offer);
+                    WS.send('voice_offer', {
+                        channelId: this.currentChannel || null,
+                        targetUserId: peerId,
+                        offer: connection.localDescription
+                    });
+                } catch (e) {
+                    console.error('[Voice] Renegotiation failed:', e);
+                }
             }
         };
 

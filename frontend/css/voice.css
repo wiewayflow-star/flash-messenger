@@ -1464,13 +1464,15 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 50;
+    z-index: 10;
+    pointer-events: none;
 }
 
 .screen-share-container video {
     max-width: 100%;
     max-height: 100%;
     object-fit: contain;
+    pointer-events: auto;
 }
 
 .screen-share-label {
@@ -1485,6 +1487,7 @@
     display: flex;
     align-items: center;
     gap: 6px;
+    pointer-events: auto;
 }
 
 .screen-share-label svg {
@@ -1502,7 +1505,7 @@
     padding: 8px;
     background: rgba(0, 0, 0, 0.5);
     border-radius: 8px;
-    z-index: 60;
+    z-index: 20;
 }
 
 .embedded-call-container.has-screen-share .embedded-call-avatar {
@@ -1518,6 +1521,8 @@
     transition: transform 0.3s ease, opacity 0.3s ease;
     transform: translateY(0);
     opacity: 1;
+    z-index: 100;
+    position: relative;
 }
 
 .embedded-call-controls-bar.hidden {
