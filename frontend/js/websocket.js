@@ -137,7 +137,8 @@ const WS = {
                     // User is not in this DM chat - show notification and increment unread counter
                     console.log('✗ User not in this DM chat - showing notification');
                     const author = payload.message.author;
-                    if (author) {
+                    // Don't show notification for system messages (like call_ended)
+                    if (author && payload.message.type !== 'call_ended') {
                         // Increment unread counter for this user
                         Store.addUnreadDM(author.id);
                         // Update DM list to show badge
@@ -150,8 +151,10 @@ const WS = {
                         );
                     }
                 }
-                // Play notification sound
-                this.playNotificationSound();
+                // Play notification sound (but not for system messages)
+                if (payload.message.type !== 'call_ended') {
+                    this.playNotificationSound();
+                }
                 console.log('=== END DM MESSAGE ===');
                 break;
 

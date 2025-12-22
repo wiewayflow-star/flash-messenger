@@ -85,6 +85,9 @@ const Utils = {
     shouldGroupMessages(prevMsg, currMsg) {
         if (!prevMsg || !currMsg) return false;
         
+        // System messages should never be grouped
+        if (currMsg.type === 'call_ended' || prevMsg.type === 'call_ended') return false;
+        
         const prevAuthor = prevMsg.author_id || prevMsg.author?.id;
         const currAuthor = currMsg.author_id || currMsg.author?.id;
         
