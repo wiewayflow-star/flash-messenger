@@ -1347,10 +1347,8 @@ wss.on('connection', (ws) => {
         try {
             const { type, payload } = JSON.parse(data);
             
-            // Log all incoming messages for debugging
-            if (type.startsWith('screen_')) {
-                console.log(`[WS] Received ${type} from user ${userId}`);
-            }
+            // Log ALL incoming messages
+            console.log(`[WS IN] type=${type} from userId=${userId}`);
 
             switch (type) {
                 case 'authenticate':
