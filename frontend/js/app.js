@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Flash Main Application
  */
 const App = {
@@ -54,7 +54,7 @@ const App = {
     },
 
     async updateFriendRequestsBadge() {
-        // Update badge on "Ð”Ñ€ÑƒÐ·ÑŒÑ" button
+        // Update badge on "Друзья" button
         try {
             const { incoming } = await API.friends.getRequests();
             const existingBadge = document.querySelector('.friend-requests-badge');
@@ -131,7 +131,7 @@ const App = {
             } else if (item && item.dataset.type === 'voice') {
                 // Join voice channel
                 if (window.Voice) {
-                    Voice.joinChannel(item.dataset.channel, item.querySelector('.channel-name')?.textContent || 'Ð“Ð¾Ð»Ð¾ÑÐ¾Ð²Ð¾Ð¹ ÐºÐ°Ð½Ð°Ð»');
+                    Voice.joinChannel(item.dataset.channel, item.querySelector('.channel-name')?.textContent || 'Голосовой канал');
                 }
             }
         });
@@ -230,7 +230,7 @@ const App = {
         Utils.$('#toggle-flash-mode').addEventListener('click', () => {
             const current = Store.state.settings.flashMode;
             Store.updateSettings({ flashMode: !current });
-            Utils.$('#toggle-flash-mode').textContent = current ? 'Ð’ÐºÐ»ÑŽÑ‡Ð¸Ñ‚ÑŒ Flash Mode' : 'Ð’Ñ‹ÐºÐ»ÑŽÑ‡Ð¸Ñ‚ÑŒ Flash Mode';
+            Utils.$('#toggle-flash-mode').textContent = current ? 'Включить Flash Mode' : 'Выключить Flash Mode';
         });
 
         // Settings checkboxes
@@ -333,7 +333,7 @@ const App = {
             this.switchSettingsTab('profile');
         });
 
-        // Status options (hover-based dropdown)
+        // Status options
         Utils.$$('.status-option').forEach(option => {
             option.addEventListener('click', () => {
                 const status = option.dataset.status;
@@ -425,19 +425,10 @@ const App = {
         // Update bio
         Utils.$('#mini-profile-bio').textContent = user.bio || '';
 
-        // Update current status display
-        const statusTexts = { online: 'Ð’ ÑÐµÑ‚Ð¸', idle: 'ÐÐµ Ð°ÐºÑ‚Ð¸Ð²ÐµÐ½', dnd: 'ÐÐµ Ð±ÐµÑÐ¿Ð¾ÐºÐ¾Ð¸Ñ‚ÑŒ', offline: 'ÐÐµÐ²Ð¸Ð´Ð¸Ð¼Ñ‹Ð¹' };
-        Utils.$('#status-current-text').textContent = statusTexts[currentStatus] || 'Ð’ ÑÐµÑ‚Ð¸';
-        const statusDot = Utils.$('#status-current-dot');
-        statusDot.className = `status-dot-option ${currentStatus}`;
-
         // Update active status option
         Utils.$$('.status-option').forEach(opt => {
             opt.classList.toggle('active', opt.dataset.status === currentStatus);
         });
-
-        // Close status dropdown
-        Utils.$('#mini-profile-status-selector')?.classList.remove('open');
 
         miniProfile.classList.add('show');
     },
@@ -455,12 +446,6 @@ const App = {
             const statusBadge = Utils.$('#mini-profile-status-badge');
             statusBadge.className = `mini-profile-badge ${status}`;
 
-            // Update current status display
-            const statusTexts = { online: 'Ð’ ÑÐµÑ‚Ð¸', idle: 'ÐÐµ Ð°ÐºÑ‚Ð¸Ð²ÐµÐ½', dnd: 'ÐÐµ Ð±ÐµÑÐ¿Ð¾ÐºÐ¾Ð¸Ñ‚ÑŒ', offline: 'ÐÐµÐ²Ð¸Ð´Ð¸Ð¼Ñ‹Ð¹' };
-            Utils.$('#status-current-text').textContent = statusTexts[status] || 'Ð’ ÑÐµÑ‚Ð¸';
-            const statusDot = Utils.$('#status-current-dot');
-            statusDot.className = `status-dot-option ${status}`;
-
             // Update active status option
             Utils.$$('.status-option').forEach(opt => {
                 opt.classList.toggle('active', opt.dataset.status === status);
@@ -473,8 +458,7 @@ const App = {
                 avatarEl.className = `user-avatar status-${status}`;
             }
 
-            // Close status dropdown
-            Utils.$('#mini-profile-status-selector')?.classList.remove('open');
+            this.hideMiniProfile();
         } catch (e) {
             console.error('Failed to update status:', e);
         }
@@ -551,14 +535,14 @@ const App = {
                 <svg viewBox="0 0 24 24" width="16" height="16" style="margin-right: 6px; vertical-align: middle;">
                     <path fill="currentColor" d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
                 </svg>
-                ÐŸÑ€Ð¸Ð³Ð»Ð°ÑÐ¸Ñ‚ÑŒ
+                Пригласить
             </button>
             <div class="channel-category">
-                <div class="category-header">Ð¢ÐµÐºÑÑ‚Ð¾Ð²Ñ‹Ðµ ÐºÐ°Ð½Ð°Ð»Ñ‹</div>
+                <div class="category-header">Текстовые каналы</div>
                 ${textChannels.map(c => Components.channelItem(c, c.id === Store.state.currentChannel?.id)).join('')}
             </div>
             <div class="channel-category">
-                <div class="category-header">Ð“Ð¾Ð»Ð¾ÑÐ¾Ð²Ñ‹Ðµ ÐºÐ°Ð½Ð°Ð»Ñ‹</div>
+                <div class="category-header">Голосовые каналы</div>
                 ${voiceChannels.map(c => Components.channelItem(c, false, Store.getVoiceChannelUsers(c.id))).join('')}
             </div>
         `;
@@ -809,8 +793,8 @@ const App = {
             return;
         }
 
-        const members = users.map(id => Store.state.members.find(m => m.id === id)?.username || 'ÐšÑ‚Ð¾-Ñ‚Ð¾');
-        indicator.innerHTML = `<span class="typing-dots"><span></span><span></span><span></span></span> ${members.join(', ')} Ð¿ÐµÑ‡Ð°Ñ‚Ð°${members.length > 1 ? 'ÑŽÑ‚' : 'ÐµÑ‚'}...`;
+        const members = users.map(id => Store.state.members.find(m => m.id === id)?.username || 'Кто-то');
+        indicator.innerHTML = `<span class="typing-dots"><span></span><span></span><span></span></span> ${members.join(', ')} печата${members.length > 1 ? 'ют' : 'ет'}...`;
     },
 
     // Members
@@ -852,10 +836,10 @@ const App = {
             console.log('[Search] Found users:', users);
             container.innerHTML = users.length 
                 ? users.map(u => Components.searchResult(u)).join('')
-                : '<p style="color: var(--text-muted); text-align: center;">ÐÐ¸ÐºÐ¾Ð³Ð¾ Ð½Ðµ Ð½Ð°Ð¹Ð´ÐµÐ½Ð¾</p>';
+                : '<p style="color: var(--text-muted); text-align: center;">Никого не найдено</p>';
         } catch (error) {
             console.error('[Search] Error:', error);
-            container.innerHTML = '<p style="color: var(--danger); text-align: center;">ÐžÑˆÐ¸Ð±ÐºÐ° Ð¿Ð¾Ð¸ÑÐºÐ°</p>';
+            container.innerHTML = '<p style="color: var(--danger); text-align: center;">Ошибка поиска</p>';
         }
     },
 
@@ -913,7 +897,7 @@ const App = {
         Utils.$('#setting-animations').checked = settings.animations;
         Utils.$('#setting-glow').checked = settings.glow;
         Utils.$('#setting-dynamic-bg').checked = settings.dynamicBg;
-        Utils.$('#toggle-flash-mode').textContent = settings.flashMode ? 'Ð’Ñ‹ÐºÐ»ÑŽÑ‡Ð¸Ñ‚ÑŒ Flash Mode' : 'Ð’ÐºÐ»ÑŽÑ‡Ð¸Ñ‚ÑŒ Flash Mode';
+        Utils.$('#toggle-flash-mode').textContent = settings.flashMode ? 'Выключить Flash Mode' : 'Включить Flash Mode';
     },
 
     switchSettingsTab(section) {
@@ -944,12 +928,12 @@ const App = {
         if (!file) return;
         
         if (file.size > 5 * 1024 * 1024) {
-            alert('Ð¤Ð°Ð¹Ð» ÑÐ»Ð¸ÑˆÐºÐ¾Ð¼ Ð±Ð¾Ð»ÑŒÑˆÐ¾Ð¹. ÐœÐ°ÐºÑÐ¸Ð¼ÑƒÐ¼ 5MB');
+            alert('Файл слишком большой. Максимум 5MB');
             return;
         }
         
         if (!file.type.startsWith('image/')) {
-            alert('Ð’Ñ‹Ð±ÐµÑ€Ð¸Ñ‚Ðµ Ð¸Ð·Ð¾Ð±Ñ€Ð°Ð¶ÐµÐ½Ð¸Ðµ');
+            alert('Выберите изображение');
             return;
         }
         
@@ -965,7 +949,7 @@ const App = {
                 this.loadSettings();
             } catch (error) {
                 console.error('Failed to save image:', error);
-                alert('ÐžÑˆÐ¸Ð±ÐºÐ° ÑÐ¾Ñ…Ñ€Ð°Ð½ÐµÐ½Ð¸Ñ Ð¸Ð·Ð¾Ð±Ñ€Ð°Ð¶ÐµÐ½Ð¸Ñ');
+                alert('Ошибка сохранения изображения');
             }
         });
     },
@@ -986,24 +970,24 @@ const App = {
         const messageEl = Utils.$('#password-message');
         
         if (newPassword !== confirmPassword) {
-            messageEl.textContent = 'ÐŸÐ°Ñ€Ð¾Ð»Ð¸ Ð½Ðµ ÑÐ¾Ð²Ð¿Ð°Ð´Ð°ÑŽÑ‚';
+            messageEl.textContent = 'Пароли не совпадают';
             messageEl.style.color = 'var(--danger)';
             return;
         }
         
         if (newPassword.length < 6) {
-            messageEl.textContent = 'ÐŸÐ°Ñ€Ð¾Ð»ÑŒ Ð¼Ð¸Ð½Ð¸Ð¼ÑƒÐ¼ 6 ÑÐ¸Ð¼Ð²Ð¾Ð»Ð¾Ð²';
+            messageEl.textContent = 'Пароль минимум 6 символов';
             messageEl.style.color = 'var(--danger)';
             return;
         }
         
         try {
             await API.auth.changePassword(currentPassword, newPassword);
-            messageEl.textContent = 'ÐŸÐ°Ñ€Ð¾Ð»ÑŒ ÑƒÑÐ¿ÐµÑˆÐ½Ð¾ Ð¸Ð·Ð¼ÐµÐ½Ñ‘Ð½!';
+            messageEl.textContent = 'Пароль успешно изменён!';
             messageEl.style.color = 'var(--success)';
             form.reset();
         } catch (error) {
-            messageEl.textContent = error.message || 'ÐžÑˆÐ¸Ð±ÐºÐ° ÑÐ¼ÐµÐ½Ñ‹ Ð¿Ð°Ñ€Ð¾Ð»Ñ';
+            messageEl.textContent = error.message || 'Ошибка смены пароля';
             messageEl.style.color = 'var(--danger)';
         }
     },
@@ -1030,7 +1014,7 @@ const App = {
             if (friends.length > 0) {
                 dmListHtml = `
                     <div class="dm-section">
-                        <div class="dm-section-title">Ð›Ð¸Ñ‡Ð½Ñ‹Ðµ ÑÐ¾Ð¾Ð±Ñ‰ÐµÐ½Ð¸Ñ</div>
+                        <div class="dm-section-title">Личные сообщения</div>
                         ${friends.map(friend => {
                             const avatarStyle = friend.avatar 
                                 ? `background-image: url(${friend.avatar}); background-size: cover; background-position: center;`
@@ -1057,7 +1041,7 @@ const App = {
             } else {
                 dmListHtml = `
                     <p style="color: var(--text-muted); text-align: center; padding: 20px; font-size: 13px;">
-                        Ð”Ð¾Ð±Ð°Ð²ÑŒÑ‚Ðµ Ð´Ñ€ÑƒÐ·ÐµÐ¹, Ñ‡Ñ‚Ð¾Ð±Ñ‹ Ð½Ð°Ñ‡Ð°Ñ‚ÑŒ Ð¾Ð±Ñ‰ÐµÐ½Ð¸Ðµ
+                        Добавьте друзей, чтобы начать общение
                     </p>
                 `;
             }
@@ -1073,10 +1057,10 @@ const App = {
             
             Utils.$('#channel-list').innerHTML = `
                 <button class="btn btn-primary" style="width: 100%; margin-bottom: 8px;" onclick="App.showHome()">
-                    ÐžÐ±Ð½Ð¾Ð²Ð¸Ñ‚ÑŒ
+                    Обновить
                 </button>
                 <button class="btn btn-secondary" style="width: 100%; margin-bottom: 16px; position: relative;" onclick="App.showFriends()">
-                    Ð”Ñ€ÑƒÐ·ÑŒÑ${friendRequestsBadge}
+                    Друзья${friendRequestsBadge}
                 </button>
                 <div class="dm-list">${dmListHtml}</div>
             `;
@@ -1084,11 +1068,11 @@ const App = {
             console.error('Failed to load friends:', error);
             Utils.$('#channel-list').innerHTML = `
                 <button class="btn btn-secondary" style="width: 100%; margin-bottom: 16px;" onclick="App.showFriends()">
-                    Ð”Ñ€ÑƒÐ·ÑŒÑ
+                    Друзья
                 </button>
                 <div class="dm-list">
                     <p style="color: var(--text-muted); text-align: center; padding: 20px;">
-                        ÐžÑˆÐ¸Ð±ÐºÐ° Ð·Ð°Ð³Ñ€ÑƒÐ·ÐºÐ¸
+                        Ошибка загрузки
                     </p>
                 </div>
             `;
@@ -1104,7 +1088,7 @@ const App = {
             Utils.$('#profile-view-avatar').textContent = Utils.getInitials(user.username);
             Utils.$('#profile-view-username').textContent = user.username;
             Utils.$('#profile-view-tag').textContent = user.tag;
-            Utils.$('#profile-view-bio').textContent = user.bio || 'ÐÐµÑ‚ Ð¾Ð¿Ð¸ÑÐ°Ð½Ð¸Ñ';
+            Utils.$('#profile-view-bio').textContent = user.bio || 'Нет описания';
             Utils.$('#profile-view-status').textContent = this.getStatusText(user.status);
             Utils.$('#profile-view-created').textContent = Utils.formatDate(user.created_at);
             
@@ -1117,11 +1101,11 @@ const App = {
             
             const addFriendBtn = Utils.$('#add-friend-btn');
             if (isFriend) {
-                addFriendBtn.textContent = 'Ð£Ð´Ð°Ð»Ð¸Ñ‚ÑŒ Ð¸Ð· Ð´Ñ€ÑƒÐ·ÐµÐ¹';
+                addFriendBtn.textContent = 'Удалить из друзей';
                 addFriendBtn.className = 'btn btn-danger';
                 addFriendBtn.onclick = () => this.removeFriendFromProfile();
             } else {
-                addFriendBtn.textContent = 'Ð”Ð¾Ð±Ð°Ð²Ð¸Ñ‚ÑŒ Ð² Ð´Ñ€ÑƒÐ·ÑŒÑ';
+                addFriendBtn.textContent = 'Добавить в друзья';
                 addFriendBtn.className = 'btn btn-success';
                 addFriendBtn.onclick = () => this.sendFriendRequest();
             }
@@ -1143,7 +1127,7 @@ const App = {
         try {
             // Disable button and show loading
             addFriendBtn.disabled = true;
-            addFriendBtn.textContent = 'ÐžÑ‚Ð¿Ñ€Ð°Ð²ÐºÐ°...';
+            addFriendBtn.textContent = 'Отправка...';
             
             await API.friends.sendRequest(this.currentProfileUserId);
             
@@ -1152,7 +1136,7 @@ const App = {
                 <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; stroke: currentColor; stroke-width: 3; fill: none; margin-right: 8px;">
                     <polyline points="20 6 9 17 4 12"></polyline>
                 </svg>
-                Ð—Ð°Ð¿Ñ€Ð¾Ñ Ð¾Ñ‚Ð¿Ñ€Ð°Ð²Ð»ÐµÐ½
+                Запрос отправлен
             `;
             addFriendBtn.className = 'btn btn-success';
             addFriendBtn.style.pointerEvents = 'none';
@@ -1166,7 +1150,7 @@ const App = {
             addFriendBtn.textContent = originalText;
             addFriendBtn.disabled = false;
             // Show error inline instead of alert
-            addFriendBtn.textContent = error.message || 'ÐžÑˆÐ¸Ð±ÐºÐ°';
+            addFriendBtn.textContent = error.message || 'Ошибка';
             addFriendBtn.className = 'btn btn-danger';
             setTimeout(() => {
                 addFriendBtn.textContent = originalText;
@@ -1177,13 +1161,13 @@ const App = {
 
     async removeFriendFromProfile() {
         if (!this.currentProfileUserId) return;
-        if (!confirm('Ð£Ð´Ð°Ð»Ð¸Ñ‚ÑŒ Ð¸Ð· Ð´Ñ€ÑƒÐ·ÐµÐ¹?')) return;
+        if (!confirm('Удалить из друзей?')) return;
         
         const btn = Utils.$('#add-friend-btn');
         
         try {
             btn.disabled = true;
-            btn.textContent = 'Ð£Ð´Ð°Ð»ÐµÐ½Ð¸Ðµ...';
+            btn.textContent = 'Удаление...';
             
             await API.friends.remove(this.currentProfileUserId);
             
@@ -1192,7 +1176,7 @@ const App = {
                 <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; stroke: currentColor; stroke-width: 3; fill: none; margin-right: 8px;">
                     <polyline points="20 6 9 17 4 12"></polyline>
                 </svg>
-                Ð£Ð´Ð°Ð»ÐµÐ½Ð¾
+                Удалено
             `;
             
             setTimeout(() => {
@@ -1200,9 +1184,9 @@ const App = {
             }, 1000);
         } catch (error) {
             console.error('Failed to remove friend:', error);
-            btn.textContent = 'ÐžÑˆÐ¸Ð±ÐºÐ°';
+            btn.textContent = 'Ошибка';
             setTimeout(() => {
-                btn.textContent = 'Ð£Ð´Ð°Ð»Ð¸Ñ‚ÑŒ Ð¸Ð· Ð´Ñ€ÑƒÐ·ÐµÐ¹';
+                btn.textContent = 'Удалить из друзей';
                 btn.disabled = false;
             }, 2000);
         }
@@ -1210,12 +1194,12 @@ const App = {
 
     getStatusText(status) {
         const statuses = {
-            online: 'ÐžÐ½Ð»Ð°Ð¹Ð½',
-            idle: 'ÐÐµ Ð½Ð° Ð¼ÐµÑÑ‚Ðµ',
-            dnd: 'ÐÐµ Ð±ÐµÑÐ¿Ð¾ÐºÐ¾Ð¸Ñ‚ÑŒ',
-            offline: 'ÐžÑ„Ñ„Ð»Ð°Ð¹Ð½'
+            online: 'Онлайн',
+            idle: 'Не на месте',
+            dnd: 'Не беспокоить',
+            offline: 'Оффлайн'
         };
-        return statuses[status] || 'ÐÐµÐ¸Ð·Ð²ÐµÑÑ‚Ð½Ð¾';
+        return statuses[status] || 'Неизвестно';
     },
 
     // Update unread badge for a specific user in DM list
@@ -1269,20 +1253,20 @@ const App = {
         menu.innerHTML = `
             <div class="context-menu-item" data-action="rename">
                 <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
-                ÐŸÐµÑ€ÐµÐ¸Ð¼ÐµÐ½Ð¾Ð²Ð°Ñ‚ÑŒ
+                Переименовать
             </div>
             <div class="context-menu-item" data-action="mute">
                 <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>
-                ${channel.muted ? 'Ð’ÐºÐ»ÑŽÑ‡Ð¸Ñ‚ÑŒ Ð·Ð²ÑƒÐº' : 'Ð—Ð°Ð³Ð»ÑƒÑˆÐ¸Ñ‚ÑŒ ÐºÐ°Ð½Ð°Ð»'}
+                ${channel.muted ? 'Включить звук' : 'Заглушить канал'}
             </div>
             <div class="context-menu-item" data-action="hideNames">
                 <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
-                ${channel.hideNames ? 'ÐŸÐ¾ÐºÐ°Ð·Ð°Ñ‚ÑŒ Ð¸Ð¼ÐµÐ½Ð°' : 'Ð¡ÐºÑ€Ñ‹Ñ‚ÑŒ Ð¸Ð¼ÐµÐ½Ð°'}
+                ${channel.hideNames ? 'Показать имена' : 'Скрыть имена'}
             </div>
             <div class="context-menu-divider"></div>
             <div class="context-menu-item danger" data-action="delete">
                 <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
-                Ð£Ð´Ð°Ð»Ð¸Ñ‚ÑŒ ÐºÐ°Ð½Ð°Ð»
+                Удалить канал
             </div>
         `;
 
@@ -1329,7 +1313,7 @@ const App = {
                 this.renderChannels();
                 break;
             case 'delete':
-                if (confirm(`Ð£Ð´Ð°Ð»Ð¸Ñ‚ÑŒ ÐºÐ°Ð½Ð°Ð» "${channel.name}"?`)) {
+                if (confirm(`Удалить канал "${channel.name}"?`)) {
                     this.deleteChannel(channelId);
                 }
                 break;
@@ -1345,15 +1329,15 @@ const App = {
         modal.id = 'rename-channel-modal';
         modal.innerHTML = `
             <div class="modal-content">
-                <h2>ÐŸÐµÑ€ÐµÐ¸Ð¼ÐµÐ½Ð¾Ð²Ð°Ñ‚ÑŒ ÐºÐ°Ð½Ð°Ð»</h2>
+                <h2>Переименовать канал</h2>
                 <form id="rename-channel-form">
                     <div class="form-group">
-                        <label>ÐÐ°Ð·Ð²Ð°Ð½Ð¸Ðµ ÐºÐ°Ð½Ð°Ð»Ð°</label>
+                        <label>Название канала</label>
                         <input type="text" id="new-channel-name" value="${Utils.escapeHtml(channel.name)}" required>
                     </div>
                     <div class="modal-actions">
-                        <button type="button" class="btn btn-secondary" onclick="App.hideRenameModal()">ÐžÑ‚Ð¼ÐµÐ½Ð°</button>
-                        <button type="submit" class="btn btn-primary">Ð¡Ð¾Ñ…Ñ€Ð°Ð½Ð¸Ñ‚ÑŒ</button>
+                        <button type="button" class="btn btn-secondary" onclick="App.hideRenameModal()">Отмена</button>
+                        <button type="submit" class="btn btn-primary">Сохранить</button>
                     </div>
                 </form>
             </div>
@@ -1385,7 +1369,7 @@ const App = {
             this.renderChannels();
         } catch (error) {
             console.error('Failed to delete channel:', error);
-            alert('ÐžÑˆÐ¸Ð±ÐºÐ° ÑƒÐ´Ð°Ð»ÐµÐ½Ð¸Ñ ÐºÐ°Ð½Ð°Ð»Ð°');
+            alert('Ошибка удаления канала');
         }
     },
 
@@ -1401,7 +1385,7 @@ const App = {
 
     // Friends view
     async showFriends() {
-        Utils.$('#server-name').textContent = 'Ð”Ñ€ÑƒÐ·ÑŒÑ';
+        Utils.$('#server-name').textContent = 'Друзья';
         
         // Hide voice/call panel when leaving chat (but don't end the call)
         if (window.Voice) {
@@ -1419,7 +1403,7 @@ const App = {
                     <path d="M19 12H5M12 19l-7-7 7-7"/>
                 </svg>
             </span>
-            Ð”Ñ€ÑƒÐ·ÑŒÑ
+            Друзья
         `;
         Utils.$('#channel-hash').style.display = 'none';
         
@@ -1450,7 +1434,7 @@ const App = {
             if (incoming.length > 0) {
                 html += `
                     <div class="friends-section">
-                        <h3 style="color: var(--text-primary); margin-bottom: 12px;">Ð’Ñ…Ð¾Ð´ÑÑ‰Ð¸Ðµ Ð·Ð°Ð¿Ñ€Ð¾ÑÑ‹ (${incoming.length})</h3>
+                        <h3 style="color: var(--text-primary); margin-bottom: 12px;">Входящие запросы (${incoming.length})</h3>
                         ${incoming.map(req => `
                             <div class="friend-request-item">
                                 <div class="friend-avatar" style="background: ${Utils.getUserColor(req.user.id)}">${Utils.getInitials(req.user.username)}</div>
@@ -1459,8 +1443,8 @@ const App = {
                                     <div class="friend-tag">${req.user.tag}</div>
                                 </div>
                                 <div class="friend-actions">
-                                    <button class="btn btn-success btn-sm" onclick="App.acceptFriendRequest('${req.id}')">ÐŸÑ€Ð¸Ð½ÑÑ‚ÑŒ</button>
-                                    <button class="btn btn-danger btn-sm" onclick="App.rejectFriendRequest('${req.id}')">ÐžÑ‚ÐºÐ»Ð¾Ð½Ð¸Ñ‚ÑŒ</button>
+                                    <button class="btn btn-success btn-sm" onclick="App.acceptFriendRequest('${req.id}')">Принять</button>
+                                    <button class="btn btn-danger btn-sm" onclick="App.rejectFriendRequest('${req.id}')">Отклонить</button>
                                 </div>
                             </div>
                         `).join('')}
@@ -1472,7 +1456,7 @@ const App = {
             if (outgoing.length > 0) {
                 html += `
                     <div class="friends-section">
-                        <h3 style="color: var(--text-primary); margin-bottom: 12px;">Ð˜ÑÑ…Ð¾Ð´ÑÑ‰Ð¸Ðµ Ð·Ð°Ð¿Ñ€Ð¾ÑÑ‹ (${outgoing.length})</h3>
+                        <h3 style="color: var(--text-primary); margin-bottom: 12px;">Исходящие запросы (${outgoing.length})</h3>
                         ${outgoing.map(req => `
                             <div class="friend-request-item">
                                 <div class="friend-avatar" style="background: ${Utils.getUserColor(req.user.id)}">${Utils.getInitials(req.user.username)}</div>
@@ -1480,7 +1464,7 @@ const App = {
                                     <div class="friend-name">${Utils.escapeHtml(req.user.username)}</div>
                                     <div class="friend-tag">${req.user.tag}</div>
                                 </div>
-                                <div class="friend-status">ÐžÐ¶Ð¸Ð´Ð°Ð½Ð¸Ðµ...</div>
+                                <div class="friend-status">Ожидание...</div>
                             </div>
                         `).join('')}
                     </div>
@@ -1491,7 +1475,7 @@ const App = {
             if (friends.length > 0) {
                 html += `
                     <div class="friends-section">
-                        <h3 style="color: var(--text-primary); margin-bottom: 12px;">Ð’ÑÐµ Ð´Ñ€ÑƒÐ·ÑŒÑ (${friends.length})</h3>
+                        <h3 style="color: var(--text-primary); margin-bottom: 12px;">Все друзья (${friends.length})</h3>
                         ${friends.map(friend => `
                             <div class="friend-item" data-user="${friend.id}">
                                 <div class="friend-avatar" style="background: ${Utils.getUserColor(friend.id)}">
@@ -1503,8 +1487,8 @@ const App = {
                                     <div class="friend-tag">${friend.tag}</div>
                                 </div>
                                 <div class="friend-actions">
-                                    <button class="btn btn-secondary btn-sm" onclick="App.showUserProfile('${friend.id}')">ÐŸÑ€Ð¾Ñ„Ð¸Ð»ÑŒ</button>
-                                    <button class="btn btn-danger btn-sm" onclick="App.removeFriend('${friend.id}')">Ð£Ð´Ð°Ð»Ð¸Ñ‚ÑŒ</button>
+                                    <button class="btn btn-secondary btn-sm" onclick="App.showUserProfile('${friend.id}')">Профиль</button>
+                                    <button class="btn btn-danger btn-sm" onclick="App.removeFriend('${friend.id}')">Удалить</button>
                                 </div>
                             </div>
                         `).join('')}
@@ -1515,7 +1499,7 @@ const App = {
             if (incoming.length === 0 && outgoing.length === 0 && friends.length === 0) {
                 html += `
                     <p style="color: var(--text-muted); text-align: center; padding: 40px 20px;">
-                        Ð£ Ð²Ð°Ñ Ð¿Ð¾ÐºÐ° Ð½ÐµÑ‚ Ð´Ñ€ÑƒÐ·ÐµÐ¹. ÐÐ°Ð¹Ð´Ð¸Ñ‚Ðµ Ð»ÑŽÐ´ÐµÐ¹ Ñ‡ÐµÑ€ÐµÐ· Ð¿Ð¾Ð¸ÑÐº!
+                        У вас пока нет друзей. Найдите людей через поиск!
                     </p>
                 `;
             }
@@ -1524,10 +1508,10 @@ const App = {
 
             Utils.$('#channel-list').innerHTML = `
                 <button class="btn btn-primary" style="width: 100%; margin-bottom: 8px;" onclick="App.showModal('search-modal')">
-                    ÐÐ°Ð¹Ñ‚Ð¸ Ð»ÑŽÐ´ÐµÐ¹
+                    Найти людей
                 </button>
                 <button class="btn btn-secondary" style="width: 100%; margin-bottom: 16px;" onclick="App.showFriends()">
-                    ÐžÐ±Ð½Ð¾Ð²Ð¸Ñ‚ÑŒ
+                    Обновить
                 </button>
             `;
 
@@ -1554,7 +1538,7 @@ const App = {
             }
         } catch (error) {
             console.error('Failed to load friends:', error);
-            Utils.$('#messages-list').innerHTML = '<p style="color: var(--danger); text-align: center; padding: 20px;">ÐžÑˆÐ¸Ð±ÐºÐ° Ð·Ð°Ð³Ñ€ÑƒÐ·ÐºÐ¸ Ð´Ñ€ÑƒÐ·ÐµÐ¹</p>';
+            Utils.$('#messages-list').innerHTML = '<p style="color: var(--danger); text-align: center; padding: 20px;">Ошибка загрузки друзей</p>';
         }
     },
 
@@ -1564,7 +1548,7 @@ const App = {
             this.showFriends();
         } catch (error) {
             console.error('Failed to accept request:', error);
-            alert('ÐžÑˆÐ¸Ð±ÐºÐ° Ð¿Ñ€Ð¸Ð½ÑÑ‚Ð¸Ñ Ð·Ð°Ð¿Ñ€Ð¾ÑÐ°');
+            alert('Ошибка принятия запроса');
         }
     },
 
@@ -1574,19 +1558,19 @@ const App = {
             this.showFriends();
         } catch (error) {
             console.error('Failed to reject request:', error);
-            alert('ÐžÑˆÐ¸Ð±ÐºÐ° Ð¾Ñ‚ÐºÐ»Ð¾Ð½ÐµÐ½Ð¸Ñ Ð·Ð°Ð¿Ñ€Ð¾ÑÐ°');
+            alert('Ошибка отклонения запроса');
         }
     },
 
     async removeFriend(userId) {
-        if (!confirm('Ð£Ð´Ð°Ð»Ð¸Ñ‚ÑŒ Ð¸Ð· Ð´Ñ€ÑƒÐ·ÐµÐ¹?')) return;
+        if (!confirm('Удалить из друзей?')) return;
         
         try {
             await API.friends.remove(userId);
             this.showFriends();
         } catch (error) {
             console.error('Failed to remove friend:', error);
-            alert('ÐžÑˆÐ¸Ð±ÐºÐ° ÑƒÐ´Ð°Ð»ÐµÐ½Ð¸Ñ Ð´Ñ€ÑƒÐ³Ð°');
+            alert('Ошибка удаления друга');
         }
     },
 
@@ -1649,7 +1633,7 @@ const App = {
             
         } catch (error) {
             console.error('Failed to open DM:', error);
-            alert('ÐžÑˆÐ¸Ð±ÐºÐ° Ð¾Ñ‚ÐºÑ€Ñ‹Ñ‚Ð¸Ñ Ñ‡Ð°Ñ‚Ð°');
+            alert('Ошибка открытия чата');
         }
     },
 
@@ -1665,7 +1649,7 @@ const App = {
         const callBtn = document.createElement('button');
         callBtn.className = 'icon-btn';
         callBtn.id = 'dm-call-btn';
-        callBtn.title = 'ÐŸÐ¾Ð·Ð²Ð¾Ð½Ð¸Ñ‚ÑŒ';
+        callBtn.title = 'Позвонить';
         callBtn.innerHTML = `
             <svg viewBox="0 0 24 24" width="24" height="24">
                 <path fill="currentColor" d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56-.35-.12-.74-.03-1.01.24l-1.57 1.97c-2.83-1.35-5.48-3.9-6.89-6.83l1.95-1.66c.27-.28.35-.67.24-1.02-.37-1.11-.56-2.3-.56-3.53 0-.54-.45-.99-.99-.99H4.19C3.65 3 3 3.24 3 3.99 3 13.28 10.73 21 20.01 21c.71 0 .99-.63.99-1.18v-3.45c0-.54-.45-.99-.99-.99z"/>
@@ -1679,27 +1663,27 @@ const App = {
     // Start DM call
     startDMCall(user) {
         if (!Store.state.currentDM) {
-            alert('ÐžÑ‚ÐºÑ€Ð¾Ð¹Ñ‚Ðµ Ñ‡Ð°Ñ‚ Ð´Ð»Ñ Ð·Ð²Ð¾Ð½ÐºÐ°');
+            alert('Откройте чат для звонка');
             return;
         }
         
         if (window.Voice) {
             // Check if we're already in a call with this user (rejoin scenario)
             if (Voice.currentCall && Voice.currentCall.dmId === Store.state.currentDM.id) {
-                alert('Ð’Ñ‹ ÑƒÐ¶Ðµ Ð² Ð·Ð²Ð¾Ð½ÐºÐµ');
+                alert('Вы уже в звонке');
                 return;
             }
             
             Voice.startCall(Store.state.currentDM.id, user);
         } else {
-            alert('Ð“Ð¾Ð»Ð¾ÑÐ¾Ð²Ð°Ñ ÑÐ¸ÑÑ‚ÐµÐ¼Ð° Ð½Ðµ Ð·Ð°Ð³Ñ€ÑƒÐ¶ÐµÐ½Ð°');
+            alert('Голосовая система не загружена');
         }
     },
 
     // Server invites
     async showServerInvite() {
         if (!Store.state.currentServer) {
-            alert('Ð’Ñ‹Ð±ÐµÑ€Ð¸Ñ‚Ðµ ÑÐµÑ€Ð²ÐµÑ€');
+            alert('Выберите сервер');
             return;
         }
 
@@ -1711,7 +1695,7 @@ const App = {
             this.showInviteModal(invite.code, inviteUrl);
         } catch (error) {
             console.error('Failed to create invite:', error);
-            alert('ÐžÑˆÐ¸Ð±ÐºÐ° ÑÐ¾Ð·Ð´Ð°Ð½Ð¸Ñ Ð¿Ñ€Ð¸Ð³Ð»Ð°ÑˆÐµÐ½Ð¸Ñ');
+            alert('Ошибка создания приглашения');
         }
     },
 
@@ -1726,19 +1710,19 @@ const App = {
         modal.innerHTML = `
             <div class="modal-content">
                 <div class="modal-header">
-                    <h2>ÐŸÑ€Ð¸Ð³Ð»Ð°ÑÐ¸Ñ‚ÑŒ Ð½Ð° ÑÐµÑ€Ð²ÐµÑ€</h2>
+                    <h2>Пригласить на сервер</h2>
                     <button class="modal-close" onclick="document.getElementById('invite-modal').remove()">&times;</button>
                 </div>
                 <div class="invite-content">
                     <p style="color: var(--text-secondary); margin-bottom: 16px;">
-                        ÐžÑ‚Ð¿Ñ€Ð°Ð²ÑŒÑ‚Ðµ ÑÑ‚Ñƒ ÑÑÑ‹Ð»ÐºÑƒ Ð´Ñ€ÑƒÐ·ÑŒÑÐ¼, Ñ‡Ñ‚Ð¾Ð±Ñ‹ Ð¾Ð½Ð¸ Ð¼Ð¾Ð³Ð»Ð¸ Ð¿Ñ€Ð¸ÑÐ¾ÐµÐ´Ð¸Ð½Ð¸Ñ‚ÑŒÑÑ Ðº ÑÐµÑ€Ð²ÐµÑ€Ñƒ "${Utils.escapeHtml(Store.state.currentServer.name)}"
+                        Отправьте эту ссылку друзьям, чтобы они могли присоединиться к серверу "${Utils.escapeHtml(Store.state.currentServer.name)}"
                     </p>
                     <div class="invite-code-container">
                         <input type="text" class="invite-code-input" value="${url}" readonly id="invite-url-input">
-                        <button class="btn btn-primary" onclick="App.copyInviteLink()">ÐšÐ¾Ð¿Ð¸Ñ€Ð¾Ð²Ð°Ñ‚ÑŒ</button>
+                        <button class="btn btn-primary" onclick="App.copyInviteLink()">Копировать</button>
                     </div>
                     <div class="invite-code-display">
-                        <span style="color: var(--text-muted);">ÐšÐ¾Ð´ Ð¿Ñ€Ð¸Ð³Ð»Ð°ÑˆÐµÐ½Ð¸Ñ:</span>
+                        <span style="color: var(--text-muted);">Код приглашения:</span>
                         <span style="color: var(--primary); font-weight: 600; font-size: 18px;">${code}</span>
                     </div>
                 </div>
@@ -1761,7 +1745,7 @@ const App = {
         // Show feedback
         const btn = input.nextElementSibling;
         const originalText = btn.textContent;
-        btn.textContent = 'Ð¡ÐºÐ¾Ð¿Ð¸Ñ€Ð¾Ð²Ð°Ð½Ð¾!';
+        btn.textContent = 'Скопировано!';
         btn.classList.add('btn-success');
         btn.classList.remove('btn-primary');
         
@@ -1779,13 +1763,13 @@ const App = {
             Store.addServer(server);
             this.renderServers();
             this.selectServer(server.id);
-            alert(`Ð’Ñ‹ Ð¿Ñ€Ð¸ÑÐ¾ÐµÐ´Ð¸Ð½Ð¸Ð»Ð¸ÑÑŒ Ðº ÑÐµÑ€Ð²ÐµÑ€Ñƒ "${server.name}"!`);
+            alert(`Вы присоединились к серверу "${server.name}"!`);
             
             // Clear URL params
             window.history.replaceState({}, document.title, window.location.pathname);
         } catch (error) {
             console.error('Failed to join server:', error);
-            alert(error.message || 'ÐžÑˆÐ¸Ð±ÐºÐ° Ð¿Ñ€Ð¸ÑÐ¾ÐµÐ´Ð¸Ð½ÐµÐ½Ð¸Ñ Ðº ÑÐµÑ€Ð²ÐµÑ€Ñƒ');
+            alert(error.message || 'Ошибка присоединения к серверу');
         }
     },
 
@@ -1925,7 +1909,7 @@ const App = {
                     <path fill="currentColor" d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02.17c0-.06.02-.11.02-.17V5c0-1.66-1.34-3-3-3S9 3.34 9 5v.18l5.98 5.99zM4.27 3L3 4.27l6.01 6.01V11c0 1.66 1.33 3 2.99 3 .22 0 .44-.03.65-.08l1.66 1.66c-.71.33-1.5.52-2.31.52-2.76 0-5.3-2.1-5.3-5.1H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c.91-.13 1.77-.45 2.54-.9L19.73 21 21 19.73 4.27 3z"/>
                 </svg>
             `;
-            btn.title = 'Ð’ÐºÐ»ÑŽÑ‡Ð¸Ñ‚ÑŒ Ð¼Ð¸ÐºÑ€Ð¾Ñ„Ð¾Ð½';
+            btn.title = 'Включить микрофон';
         } else {
             btn.classList.remove('active');
             btn.innerHTML = `
@@ -1933,7 +1917,7 @@ const App = {
                     <path fill="currentColor" d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.91-3c-.49 0-.9.36-.98.85C16.52 14.2 14.47 16 12 16s-4.52-1.8-4.93-4.15c-.08-.49-.49-.85-.98-.85-.61 0-1.09.54-1 1.14.49 3 2.89 5.35 5.91 5.78V20c0 .55.45 1 1 1s1-.45 1-1v-2.08c3.02-.43 5.42-2.78 5.91-5.78.1-.6-.39-1.14-1-1.14z"/>
                 </svg>
             `;
-            btn.title = 'Ð’Ñ‹ÐºÐ»ÑŽÑ‡Ð¸Ñ‚ÑŒ Ð¼Ð¸ÐºÑ€Ð¾Ñ„Ð¾Ð½';
+            btn.title = 'Выключить микрофон';
         }
     },
 
@@ -1949,7 +1933,7 @@ const App = {
                     <path fill="currentColor" d="M4.34 2.93L2.93 4.34 7.29 8.7 7 9H3v6h4l5 5v-6.59l4.18 4.18c-.65.49-1.38.88-2.18 1.11v2.06c1.34-.3 2.57-.92 3.61-1.75l2.05 2.05 1.41-1.41L4.34 2.93zM19 12c0 .82-.15 1.61-.41 2.34l1.53 1.53c.56-1.17.88-2.48.88-3.87 0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zm-7-8l-1.88 1.88L12 7.76zm4.5 8c0-1.77-1.02-3.29-2.5-4.03v1.79l2.48 2.48c.01-.08.02-.16.02-.24z"/>
                 </svg>
             `;
-            btn.title = 'Ð’ÐºÐ»ÑŽÑ‡Ð¸Ñ‚ÑŒ Ð·Ð²ÑƒÐº';
+            btn.title = 'Включить звук';
         } else {
             btn.classList.remove('active');
             btn.innerHTML = `
@@ -1957,7 +1941,7 @@ const App = {
                     <path fill="currentColor" d="M12 1c-4.97 0-9 4.03-9 9v7c0 1.66 1.34 3 3 3h3v-8H5v-2c0-3.87 3.13-7 7-7s7 3.13 7 7v2h-4v8h3c1.66 0 3-1.34 3-3v-7c0-4.97-4.03-9-9-9z"/>
                 </svg>
             `;
-            btn.title = 'Ð’Ñ‹ÐºÐ»ÑŽÑ‡Ð¸Ñ‚ÑŒ Ð·Ð²ÑƒÐº';
+            btn.title = 'Выключить звук';
         }
     },
 
@@ -1972,4 +1956,3 @@ const App = {
 
 // Make App globally available for WebSocket handlers
 window.App = App;
-
