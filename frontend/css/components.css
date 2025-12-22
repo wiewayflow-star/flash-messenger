@@ -1946,7 +1946,7 @@
     background: var(--bg-primary);
     border-radius: 8px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-    z-index: 1000;
+    z-index: 10000;
     display: none;
     overflow: hidden;
     animation: miniProfileSlideUp 0.2s ease;
@@ -2087,6 +2087,45 @@
     margin-top: 4px;
     border-top: 1px solid var(--border-color);
     padding-top: 8px;
+    position: relative;
+}
+
+.status-current {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    font-size: 14px;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.status-current:hover {
+    background: rgba(79, 84, 92, 0.6);
+    color: var(--text-primary);
+}
+
+.status-current .status-arrow {
+    margin-left: auto;
+    transition: transform 0.2s ease;
+}
+
+.mini-profile-status-selector.open .status-current .status-arrow {
+    transform: rotate(90deg);
+}
+
+.status-dropdown {
+    display: none;
+    margin-top: 4px;
+    background: var(--bg-secondary);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.mini-profile-status-selector.open .status-dropdown {
+    display: block;
 }
 
 .status-option {

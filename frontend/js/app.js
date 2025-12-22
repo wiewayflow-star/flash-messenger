@@ -333,6 +333,13 @@ const App = {
             this.switchSettingsTab('profile');
         });
 
+        // Status selector toggle
+        Utils.$('#status-current')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const selector = Utils.$('#mini-profile-status-selector');
+            selector?.classList.toggle('open');
+        });
+
         // Status options
         Utils.$$('.status-option').forEach(option => {
             option.addEventListener('click', () => {
@@ -349,6 +356,12 @@ const App = {
                 !miniProfile.contains(e.target) && 
                 !userInfo?.contains(e.target)) {
                 this.hideMiniProfile();
+            }
+            // Close status dropdown
+            const statusSelector = Utils.$('#mini-profile-status-selector');
+            if (statusSelector?.classList.contains('open') && 
+                !statusSelector.contains(e.target)) {
+                statusSelector.classList.remove('open');
             }
         });
     },
@@ -425,10 +438,19 @@ const App = {
         // Update bio
         Utils.$('#mini-profile-bio').textContent = user.bio || '';
 
+        // Update current status display
+        const statusTexts = { online: 'В сети', idle: 'Не активен', dnd: 'Не беспокоить', offline: 'Невидимый' };
+        Utils.$('#status-current-text').textContent = statusTexts[currentStatus] || 'В сети';
+        const statusDot = Utils.$('#status-current-dot');
+        statusDot.className = `status-dot-option ${currentStatus}`;
+
         // Update active status option
         Utils.$$('.status-option').forEach(opt => {
             opt.classList.toggle('active', opt.dataset.status === currentStatus);
         });
+
+        // Close status dropdown
+        Utils.$('#mini-profile-status-selector')?.classList.remove('open');
 
         miniProfile.classList.add('show');
     },
@@ -446,6 +468,12 @@ const App = {
             const statusBadge = Utils.$('#mini-profile-status-badge');
             statusBadge.className = `mini-profile-badge ${status}`;
 
+            // Update current status display
+            const statusTexts = { online: 'В сети', idle: 'Не активен', dnd: 'Не беспокоить', offline: 'Невидимый' };
+            Utils.$('#status-current-text').textContent = statusTexts[status] || 'В сети';
+            const statusDot = Utils.$('#status-current-dot');
+            statusDot.className = `status-dot-option ${status}`;
+
             // Update active status option
             Utils.$$('.status-option').forEach(opt => {
                 opt.classList.toggle('active', opt.dataset.status === status);
@@ -458,7 +486,8 @@ const App = {
                 avatarEl.className = `user-avatar status-${status}`;
             }
 
-            this.hideMiniProfile();
+            // Close status dropdown
+            Utils.$('#mini-profile-status-selector')?.classList.remove('open');
         } catch (e) {
             console.error('Failed to update status:', e);
         }

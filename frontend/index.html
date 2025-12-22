@@ -114,22 +114,29 @@
                                 <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
                                 Редактировать профиль
                             </button>
-                            <div class="mini-profile-status-selector">
-                                <div class="status-option" data-status="online">
-                                    <span class="status-dot-option online"></span>
-                                    В сети
+                            <div class="mini-profile-status-selector" id="mini-profile-status-selector">
+                                <div class="status-current" id="status-current">
+                                    <span class="status-dot-option online" id="status-current-dot"></span>
+                                    <span id="status-current-text">В сети</span>
+                                    <svg class="status-arrow" viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg>
                                 </div>
-                                <div class="status-option" data-status="idle">
-                                    <span class="status-dot-option idle"></span>
-                                    Не активен
-                                </div>
-                                <div class="status-option" data-status="dnd">
-                                    <span class="status-dot-option dnd"></span>
-                                    Не беспокоить
-                                </div>
-                                <div class="status-option" data-status="offline">
-                                    <span class="status-dot-option offline"></span>
-                                    Невидимый
+                                <div class="status-dropdown" id="status-dropdown">
+                                    <div class="status-option" data-status="online">
+                                        <span class="status-dot-option online"></span>
+                                        В сети
+                                    </div>
+                                    <div class="status-option" data-status="idle">
+                                        <span class="status-dot-option idle"></span>
+                                        Не активен
+                                    </div>
+                                    <div class="status-option" data-status="dnd">
+                                        <span class="status-dot-option dnd"></span>
+                                        Не беспокоить
+                                    </div>
+                                    <div class="status-option" data-status="offline">
+                                        <span class="status-dot-option offline"></span>
+                                        Невидимый
+                                    </div>
                                 </div>
                             </div>
                         </div>
