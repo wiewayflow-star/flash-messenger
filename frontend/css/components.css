@@ -480,7 +480,7 @@
 }
 
 .reaction:hover {
-    background: var(--bg-hover);
+    background: rgba(79, 84, 92, 0.6);
     transform: scale(1.15);
 }
 
@@ -720,7 +720,7 @@
 }
 
 .modal-close:hover {
-    background: var(--bg-hover);
+    background: rgba(79, 84, 92, 0.6);
     color: var(--text-primary);
     transform: rotate(90deg);
 }
@@ -971,8 +971,7 @@
 }
 
 .search-result-item:hover {
-    background: var(--bg-hover);
-    transform: translateX(5px);
+    background: rgba(79, 84, 92, 0.4);
 }
 
 .search-result-avatar {
@@ -1035,7 +1034,7 @@
 }
 
 .emoji-item:hover {
-    background: var(--bg-hover);
+    background: rgba(79, 84, 92, 0.6);
     transform: scale(1.3);
 }
 
@@ -1066,12 +1065,11 @@
     padding: 12px;
     border-radius: var(--border-radius);
     cursor: pointer;
-    transition: background 0.15s ease, transform 0.15s ease;
+    transition: background 0.15s ease;
 }
 
 .dm-item:hover {
-    background: var(--bg-hover);
-    transform: translateX(4px);
+    background: rgba(79, 84, 92, 0.4);
 }
 
 /* DM Unread Badge */
@@ -1285,7 +1283,7 @@
 
 .friend-item:hover,
 .friend-request-item:hover {
-    background: var(--bg-tertiary);
+    background: rgba(79, 84, 92, 0.4);
 }
 
 .friend-avatar {
@@ -1378,7 +1376,7 @@
 }
 
 .dm-item:hover {
-    background: var(--bg-modifier);
+    background: rgba(79, 84, 92, 0.4);
 }
 
 .dm-avatar {
@@ -1485,7 +1483,7 @@
 
 .friend-item:hover,
 .friend-request-item:hover {
-    background: var(--bg-tertiary);
+    background: rgba(79, 84, 92, 0.4);
 }
 
 .friend-avatar {
@@ -1625,7 +1623,7 @@
 }
 
 .context-menu-item:hover {
-    background: var(--bg-modifier-hover);
+    background: rgba(79, 84, 92, 0.6);
     color: var(--text-primary);
 }
 
@@ -2077,7 +2075,7 @@
 }
 
 .mini-profile-btn:hover {
-    background: var(--bg-modifier-hover);
+    background: rgba(79, 84, 92, 0.6);
     color: var(--text-primary);
 }
 
@@ -2104,7 +2102,7 @@
 }
 
 .status-option:hover {
-    background: var(--bg-modifier-hover);
+    background: rgba(79, 84, 92, 0.6);
     color: var(--text-primary);
 }
 

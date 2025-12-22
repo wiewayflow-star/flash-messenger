@@ -103,7 +103,7 @@
 }
 
 .voice-btn:hover {
-    background: var(--bg-primary);
+    background: rgba(79, 84, 92, 0.6);
     color: var(--text-primary);
 }
 
@@ -154,7 +154,7 @@
 }
 
 .voice-user:hover {
-    background: var(--bg-modifier-hover);
+    background: rgba(79, 84, 92, 0.4);
 }
 
 .voice-user-avatar {
@@ -335,7 +335,7 @@
 }
 
 .channel-item.voice:hover {
-    background: var(--bg-modifier-hover);
+    background: rgba(79, 84, 92, 0.4);
 }
 
 /* Video Call Container */
@@ -935,7 +935,7 @@
 }
 
 .embedded-call-btn.close-btn:hover {
-    background: var(--bg-modifier-hover);
+    background: rgba(79, 84, 92, 0.6);
     color: var(--text-primary);
 }
 
@@ -961,7 +961,7 @@
 }
 
 .size-btn:hover {
-    background: var(--bg-modifier-hover);
+    background: rgba(79, 84, 92, 0.6);
     color: var(--text-primary);
 }
 
@@ -1160,7 +1160,7 @@
 }
 
 .friend-select-item:hover:not(.disabled) {
-    background: var(--bg-modifier-hover);
+    background: rgba(79, 84, 92, 0.4);
 }
 
 .friend-select-item.disabled {
@@ -1335,7 +1335,7 @@
 }
 
 .call-ended-message:hover {
-    background: var(--bg-modifier-hover);
+    background: rgba(79, 84, 92, 0.3);
 }
 
 .call-ended-icon {
@@ -1415,7 +1415,7 @@
 }
 
 .call-control-button:hover {
-    background: var(--bg-modifier-hover);
+    background: rgba(79, 84, 92, 0.6);
     color: var(--text-primary);
 }
 
