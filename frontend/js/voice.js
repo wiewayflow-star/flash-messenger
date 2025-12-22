@@ -2069,7 +2069,8 @@ const Voice = {
         // - forceClose is true (timeout expired or partner's call ended completely)
         // - we're already waiting for partner (partner already left, so close completely)
         // - call was never connected (callStartTime is null - partner never answered)
-        if (this.currentCall && this.currentCall.dmId && !forceClose && !this.waitingForPartner && this.callStartTime) {
+        // - we're already in disconnected state (user clicked exit again)
+        if (this.currentCall && this.currentCall.dmId && !forceClose && !this.waitingForPartner && this.callStartTime && !this.isDisconnected) {
             // Notify server that we left
             WS.send('dm_call_end', {
                 dmId: this.currentCall.dmId
@@ -2151,7 +2152,7 @@ const Voice = {
         const fullscreenBtn = document.getElementById('call-fullscreen-btn');
         if (fullscreenBtn) fullscreenBtn.style.display = 'none';
         
-        // Add rejoin button only (no close button - user must rejoin or wait for timeout)
+        // Add rejoin and close buttons
         const actions = document.querySelector('.embedded-call-actions');
         if (actions && !document.getElementById('call-rejoin-btn')) {
             // Rejoin button
@@ -2166,7 +2167,38 @@ const Voice = {
             `;
             rejoinBtn.onclick = () => this.rejoinCurrentCall();
             actions.appendChild(rejoinBtn);
+            
+            // Close button (to fully exit)
+            const closeBtn = document.createElement('button');
+            closeBtn.className = 'embedded-call-btn close-btn';
+            closeBtn.id = 'call-close-btn';
+            closeBtn.title = 'Закрыть';
+            closeBtn.innerHTML = `
+                <svg viewBox="0 0 24 24" width="18" height="18">
+                    <path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                </svg>
+            `;
+            closeBtn.onclick = () => this.closeDisconnectedCall();
+            actions.appendChild(closeBtn);
         }
+    },
+    
+    // Close disconnected call completely
+    closeDisconnectedCall() {
+        console.log('[Voice] Closing disconnected call');
+        
+        // Clear timeout
+        this.clearSelfDisconnectTimeout();
+        
+        // Hide UI
+        this.hideCallUI();
+        
+        // Reset state
+        this.currentCall = null;
+        this.callStartTime = null;
+        this.waitingForPartner = false;
+        this.isDisconnected = false;
+        this.isMuted = false;
     },
 
     // Rejoin current call
@@ -2238,9 +2270,12 @@ const Voice = {
         const fullscreenBtn = document.getElementById('call-fullscreen-btn');
         if (fullscreenBtn) fullscreenBtn.style.display = '';
         
-        // Remove rejoin button
+        // Remove rejoin and close buttons
         const rejoinBtn = document.getElementById('call-rejoin-btn');
         if (rejoinBtn) rejoinBtn.remove();
+        
+        const closeBtn = document.getElementById('call-close-btn');
+        if (closeBtn) closeBtn.remove();
     },
 
     // Start timeout for self when disconnected (3 minutes)
