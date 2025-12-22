@@ -2112,19 +2112,21 @@
     transition: transform 0.2s ease;
 }
 
-.mini-profile-status-selector.open .status-current .status-arrow {
-    transform: rotate(90deg);
-}
-
 .status-dropdown {
     display: none;
-    margin-top: 4px;
-    background: var(--bg-secondary);
+    position: absolute;
+    left: calc(100% + 8px);
+    bottom: 0;
+    min-width: 180px;
+    background: var(--bg-primary);
     border-radius: 4px;
-    overflow: hidden;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+    padding: 6px;
+    z-index: 10001;
 }
 
-.mini-profile-status-selector.open .status-dropdown {
+.status-current:hover + .status-dropdown,
+.status-dropdown:hover {
     display: block;
 }
 
