@@ -1510,3 +1510,22 @@
     height: 40px;
     font-size: 16px;
 }
+
+
+/* ============ CALL CONTROLS AUTO-HIDE ============ */
+
+.embedded-call-controls-bar {
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.embedded-call-controls-bar.hidden {
+    transform: translateY(100%);
+    opacity: 0;
+    pointer-events: none;
+}
+
+.embedded-call-controls-bar.visible {
+    transform: translateY(0);
+    opacity: 1;
+    pointer-events: auto;
+}

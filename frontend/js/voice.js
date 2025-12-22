@@ -445,12 +445,16 @@ const Voice = {
                 callContainer.classList.remove('has-screen-share');
             }
             
-            // Remove track from peer connections
+            // Remove video sender from peer connections (keep audio!)
             for (const [peerId, peer] of this.peers) {
                 const senders = peer.connection.getSenders();
                 const videoSender = senders.find(s => s.track?.kind === 'video');
                 if (videoSender) {
-                    peer.connection.removeTrack(videoSender);
+                    try {
+                        peer.connection.removeTrack(videoSender);
+                    } catch (e) {
+                        console.error('[Voice] Failed to remove video track:', e);
+                    }
                 }
             }
             
@@ -478,28 +482,40 @@ const Voice = {
                     if (callContainer) {
                         callContainer.classList.remove('has-screen-share');
                     }
+                    // Remove video sender
+                    for (const [peerId, peer] of this.peers) {
+                        const senders = peer.connection.getSenders();
+                        const videoSender = senders.find(s => s.track?.kind === 'video');
+                        if (videoSender) {
+                            try {
+                                peer.connection.removeTrack(videoSender);
+                            } catch (e) {}
+                        }
+                    }
                     this.updateCallUIButtons();
                 };
                 
                 // Show local preview of screen share
                 this.showScreenSharePreview(this.screenStream);
                 
-                // Add to peer connections
+                // Add video track to peer connections (don't touch audio!)
                 for (const [peerId, peer] of this.peers) {
-                    const sender = peer.connection.addTrack(screenTrack, this.screenStream);
-                    console.log('[Voice] Added screen track to peer:', peerId);
-                    
-                    // Renegotiate connection
                     try {
+                        // Add screen track as new track
+                        peer.connection.addTrack(screenTrack, this.screenStream);
+                        console.log('[Voice] Added screen track to peer:', peerId);
+                        
+                        // Create new offer for renegotiation
                         const offer = await peer.connection.createOffer();
                         await peer.connection.setLocalDescription(offer);
+                        
                         WS.send('voice_offer', {
                             channelId: this.currentChannel || null,
                             targetUserId: peerId,
                             offer: peer.connection.localDescription
                         });
                     } catch (e) {
-                        console.error('[Voice] Failed to renegotiate:', e);
+                        console.error('[Voice] Failed to add screen track:', e);
                     }
                 }
                 
@@ -1833,7 +1849,7 @@ const Voice = {
                     </div>
                 `).join('')}
             </div>
-            <div class="embedded-call-controls-bar">
+            <div class="embedded-call-controls-bar" id="call-controls-bar">
                 <div class="call-controls-group">
                     <button class="call-control-button ${this.isMuted ? 'active' : ''}" id="call-mute-btn" title="Микрофон">
                         <svg viewBox="0 0 24 24" width="20" height="20">
@@ -1882,6 +1898,65 @@ const Voice = {
 
         // Bind events
         this.bindCallUIEvents();
+        
+        // Setup controls auto-hide
+        this.setupControlsAutoHide();
+        
+        // Restore screen share preview if active
+        if (this.isScreenSharing && this.screenStream) {
+            this.showScreenSharePreview(this.screenStream);
+        }
+    },
+
+    // Setup auto-hide for call controls
+    setupControlsAutoHide() {
+        const container = document.getElementById('embedded-call');
+        const controlsBar = document.getElementById('call-controls-bar');
+        if (!container || !controlsBar) return;
+
+        let hideTimeout = null;
+        
+        const showControls = () => {
+            controlsBar.classList.remove('hidden');
+            controlsBar.classList.add('visible');
+            
+            // Clear existing timeout
+            if (hideTimeout) {
+                clearTimeout(hideTimeout);
+            }
+            
+            // Set new timeout to hide after 4 seconds
+            hideTimeout = setTimeout(() => {
+                controlsBar.classList.remove('visible');
+                controlsBar.classList.add('hidden');
+            }, 4000);
+        };
+
+        // Show controls on mouse enter
+        container.addEventListener('mouseenter', showControls);
+        
+        // Show controls on mouse move
+        container.addEventListener('mousemove', showControls);
+        
+        // Keep controls visible when hovering over them
+        controlsBar.addEventListener('mouseenter', () => {
+            if (hideTimeout) {
+                clearTimeout(hideTimeout);
+            }
+            controlsBar.classList.remove('hidden');
+            controlsBar.classList.add('visible');
+        });
+        
+        // Start hide timer when leaving controls
+        controlsBar.addEventListener('mouseleave', () => {
+            hideTimeout = setTimeout(() => {
+                controlsBar.classList.remove('visible');
+                controlsBar.classList.add('hidden');
+            }, 4000);
+        });
+
+        // Initially show controls
+        showControls();
     },
 
     // Bind call UI events
