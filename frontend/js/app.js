@@ -333,14 +333,7 @@ const App = {
             this.switchSettingsTab('profile');
         });
 
-        // Status selector toggle
-        Utils.$('#status-current')?.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const selector = Utils.$('#mini-profile-status-selector');
-            selector?.classList.toggle('open');
-        });
-
-        // Status options
+        // Status options (hover-based dropdown)
         Utils.$$('.status-option').forEach(option => {
             option.addEventListener('click', () => {
                 const status = option.dataset.status;
@@ -356,12 +349,6 @@ const App = {
                 !miniProfile.contains(e.target) && 
                 !userInfo?.contains(e.target)) {
                 this.hideMiniProfile();
-            }
-            // Close status dropdown
-            const statusSelector = Utils.$('#mini-profile-status-selector');
-            if (statusSelector?.classList.contains('open') && 
-                !statusSelector.contains(e.target)) {
-                statusSelector.classList.remove('open');
             }
         });
     },
