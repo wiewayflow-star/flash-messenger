@@ -1912,3 +1912,14 @@
 .back-arrow svg {
     vertical-align: middle;
 }
+
+/* User panel mute/deafen buttons */
+.user-controls .icon-btn.active {
+    background: rgba(240, 71, 71, 0.2);
+    color: #f04747;
+}
+
+.user-controls .icon-btn.active:hover {
+    background: rgba(240, 71, 71, 0.3);
+    color: #f04747;
+}
