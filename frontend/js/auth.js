@@ -42,7 +42,7 @@ const Auth = {
 
     bindEvents() {
         // Tab switching
-        Utils.$('.auth-tab').forEach(tab => {
+        Utils.$$('.auth-tab').forEach(tab => {
             tab.addEventListener('click', () => this.switchTab(tab.dataset.tab));
         });
 
@@ -60,8 +60,8 @@ const Auth = {
     },
 
     switchTab(tab) {
-        Utils.$('.auth-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
-        Utils.$('.auth-form').forEach(f => f.classList.toggle('active', f.id === `${tab}-form`));
+        Utils.$$('.auth-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+        Utils.$$('.auth-form').forEach(f => f.classList.toggle('active', f.id === `${tab}-form`));
         this.hideError();
     },
 

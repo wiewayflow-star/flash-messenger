@@ -2,11 +2,12 @@
  * Flash Utilities
  */
 const Utils = {
-    // DOM helpers
+    // DOM helper - single element
     $(selector) {
         return document.querySelector(selector);
     },
 
+    // DOM helper - multiple elements (returns NodeList with forEach)
     $$(selector) {
         return document.querySelectorAll(selector);
     },
