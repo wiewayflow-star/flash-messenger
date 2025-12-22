@@ -452,6 +452,9 @@ const App = {
         
         // Show chat area
         Utils.$('.main-content')?.classList.remove('no-chat');
+        
+        // Show message input
+        Utils.$('.message-input-container')?.style.setProperty('display', '');
 
         // Subscribe to new channel
         WS.subscribe(channelId);
@@ -1214,6 +1217,24 @@ const App = {
     async showFriends() {
         Utils.$('#server-name').textContent = 'Друзья';
         
+        // Show chat area (remove no-chat class)
+        Utils.$('.main-content')?.classList.remove('no-chat');
+        
+        // Update header with back arrow
+        Utils.$('#channel-name').innerHTML = `
+            <span class="back-arrow" onclick="App.goBackFromFriends()" style="cursor: pointer; margin-right: 8px; opacity: 0.7;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+            </span>
+            Друзья
+        `;
+        Utils.$('#channel-hash').style.display = 'none';
+        
+        // Clear current channel/DM state
+        Store.state.currentChannel = null;
+        Store.state.currentDM = null;
+        
         try {
             const [friendsData, requestsData] = await Promise.all([
                 API.users.getFriends(),
@@ -1311,6 +1332,12 @@ const App = {
             `;
 
             Utils.$('#messages-list').innerHTML = html;
+            
+            // Hide message input (this is not a chat)
+            Utils.$('.message-input-container')?.style.setProperty('display', 'none');
+            
+            // Update badge
+            this.updateFriendRequestsBadge();
         } catch (error) {
             console.error('Failed to load friends:', error);
             Utils.$('#messages-list').innerHTML = '<p style="color: var(--danger); text-align: center; padding: 20px;">Ошибка загрузки друзей</p>';
@@ -1382,6 +1409,9 @@ const App = {
             
             // Show chat area
             Utils.$('.main-content')?.classList.remove('no-chat');
+            
+            // Show message input
+            Utils.$('.message-input-container')?.style.setProperty('display', '');
             
             console.log('[DM] Current DM set to:', Store.state.currentDM);
             console.log('[DM] Store.state.currentDM.id:', Store.state.currentDM?.id);
