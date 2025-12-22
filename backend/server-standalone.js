@@ -34,7 +34,8 @@ const DB = {
     friends: new Map(), // { id, user1_id, user2_id, created_at }
     dmChannels: new Map(), // { id, user1_id, user2_id, created_at }
     groupCalls: new Map(), // { id, name, owner_id, members: [userId], created_at } - Конфы (макс 10 человек)
-    activeCalls: new Map() // dmId -> { starterId, starterUsername, startTime, participants: Set }
+    activeCalls: new Map(), // dmId -> { starterId, starterUsername, startTime, participants: Set }
+    trustedDevices: new Map() // visitorId -> { visitorId, userId, ip, userAgent, createdAt, lastUsed }
 };
 
 // ============ MIDDLEWARE ============
@@ -200,6 +201,21 @@ app.post('/api/auth/login', async (req, res) => {
 
         const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
 
+        // Save trusted device if visitorId provided
+        const visitorId = req.body.visitorId;
+        if (visitorId) {
+            const clientIp = req.ip || req.connection.remoteAddress || 'unknown';
+            DB.trustedDevices.set(visitorId, {
+                visitorId,
+                userId: user.id,
+                ip: clientIp,
+                userAgent: req.headers['user-agent'] || '',
+                createdAt: new Date().toISOString(),
+                lastUsed: new Date().toISOString()
+            });
+            console.log(`✓ Устройство сохранено для ${user.username}${user.tag}`);
+        }
+
         console.log(`✓ Вход: ${user.username}${user.tag} (пароль проверен безопасно)`);
 
         res.json({
@@ -209,6 +225,72 @@ app.post('/api/auth/login', async (req, res) => {
     } catch (error) {
         console.error('Login error:', error.message);
         res.status(500).json({ error: true, message: 'Ошибка входа' });
+    }
+});
+
+// Auto-login by trusted device
+app.post('/api/auth/auto-login', async (req, res) => {
+    try {
+        const { visitorId } = req.body;
+        const clientIp = req.ip || req.connection.remoteAddress || 'unknown';
+        
+        if (!visitorId) {
+            return res.status(400).json({ error: true, message: 'Требуется идентификатор устройства' });
+        }
+        
+        // Check if device is trusted
+        const device = DB.trustedDevices.get(visitorId);
+        if (!device) {
+            return res.status(401).json({ error: true, message: 'Устройство не найдено' });
+        }
+        
+        // Verify IP matches (security check)
+        if (device.ip !== clientIp) {
+            return res.status(401).json({ error: true, message: 'IP адрес изменился, требуется повторный вход' });
+        }
+        
+        // Get user
+        let user = DB.users.get(device.userId);
+        if (!user) {
+            // Try to load from database
+            const account = await Database.Accounts.getById(device.userId);
+            if (!account) {
+                DB.trustedDevices.delete(visitorId);
+                return res.status(401).json({ error: true, message: 'Пользователь не найден' });
+            }
+            
+            user = {
+                id: account.id,
+                email: account.email,
+                username: account.username,
+                tag: account.tag,
+                avatar: account.avatar,
+                banner: account.banner,
+                bio: account.bio,
+                status: 'online',
+                custom_status: null,
+                publicKey: account.publicKey,
+                created_at: account.createdAt
+            };
+            DB.users.set(account.id, user);
+        } else {
+            user.status = 'online';
+        }
+        
+        // Update last used
+        device.lastUsed = new Date().toISOString();
+        
+        const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
+        
+        console.log(`✓ Автовход: ${user.username}${user.tag} (доверенное устройство)`);
+        
+        res.json({
+            user: { id: user.id, email: user.email, username: user.username, tag: user.tag, avatar: user.avatar, status: user.status },
+            token
+        });
+    } catch (error) {
+        console.error('Auto-login error:', error.message);
+        res.status(500).json({ error: true, message: 'Ошибка автоматического входа' });
     }
 });
 

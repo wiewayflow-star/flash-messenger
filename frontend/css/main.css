@@ -52,14 +52,43 @@ body {
 }
 
 /* Auth Screen */
+#auth-screen {
+    background: linear-gradient(-45deg, #1a0a2e, #2d1b4e, #1e1233, #0f0a1a);
+    background-size: 400% 400%;
+    animation: authGradient 15s ease infinite;
+    position: relative;
+}
+
+#auth-screen::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(ellipse at 30% 20%, rgba(109, 59, 217, 0.15) 0%, transparent 50%),
+                radial-gradient(ellipse at 70% 80%, rgba(155, 107, 255, 0.1) 0%, transparent 50%);
+    pointer-events: none;
+}
+
+@keyframes authGradient {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
 .auth-container {
     margin: auto;
     width: 100%;
     max-width: 400px;
     padding: 40px;
-    background: var(--bg-secondary);
+    background: rgba(18, 18, 26, 0.85);
+    backdrop-filter: blur(20px);
     border-radius: 12px;
-    box-shadow: var(--glow);
+    box-shadow: var(--glow), 0 8px 32px rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(109, 59, 217, 0.2);
+    position: relative;
+    z-index: 1;
 }
 
 .auth-logo {

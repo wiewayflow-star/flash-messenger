@@ -7,9 +7,42 @@ const Auth = {
         this.checkAuth();
     },
 
+    // Generate unique visitor ID based on browser fingerprint
+    getVisitorId() {
+        let visitorId = Utils.storage.get('flash_visitor_id');
+        if (!visitorId) {
+            // Generate a unique ID based on browser characteristics
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            ctx.textBaseline = 'top';
+            ctx.font = '14px Arial';
+            ctx.fillText('Flash', 2, 2);
+            const canvasData = canvas.toDataURL();
+            
+            const data = [
+                navigator.userAgent,
+                navigator.language,
+                screen.width + 'x' + screen.height,
+                new Date().getTimezoneOffset(),
+                canvasData.slice(-50)
+            ].join('|');
+            
+            // Simple hash
+            let hash = 0;
+            for (let i = 0; i < data.length; i++) {
+                const char = data.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash;
+            }
+            visitorId = 'v_' + Math.abs(hash).toString(36) + '_' + Date.now().toString(36);
+            Utils.storage.set('flash_visitor_id', visitorId);
+        }
+        return visitorId;
+    },
+
     bindEvents() {
         // Tab switching
-        Utils.$$('.auth-tab').forEach(tab => {
+        Utils.$('.auth-tab').forEach(tab => {
             tab.addEventListener('click', () => this.switchTab(tab.dataset.tab));
         });
 
@@ -27,12 +60,27 @@ const Auth = {
     },
 
     switchTab(tab) {
-        Utils.$$('.auth-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
-        Utils.$$('.auth-form').forEach(f => f.classList.toggle('active', f.id === `${tab}-form`));
+        Utils.$('.auth-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+        Utils.$('.auth-form').forEach(f => f.classList.toggle('active', f.id === `${tab}-form`));
         this.hideError();
     },
 
     async checkAuth() {
+        // First try auto-login by device
+        const visitorId = this.getVisitorId();
+        
+        try {
+            const { user, token } = await API.auth.autoLogin(visitorId);
+            Store.setUser(user, token);
+            this.onAuthSuccess();
+            console.log('[Auth] Автоматический вход успешен');
+            return;
+        } catch (e) {
+            // Auto-login failed, try token
+            console.log('[Auth] Автовход не удался, проверяем токен...');
+        }
+        
+        // Fall back to token check
         if (!Store.state.token) return;
 
         try {
@@ -47,9 +95,10 @@ const Auth = {
     async login(form) {
         const email = form.email.value;
         const password = form.password.value;
+        const visitorId = this.getVisitorId();
 
         try {
-            const { user, token } = await API.auth.login(email, password);
+            const { user, token } = await API.auth.login(email, password, visitorId);
             Store.setUser(user, token);
             this.onAuthSuccess();
         } catch (error) {
@@ -77,6 +126,9 @@ const Auth = {
         } catch (e) {
             // Ignore
         }
+        
+        // Clear visitor ID to require re-login
+        Utils.storage.remove('flash_visitor_id');
         
         Store.clearUser();
         WS.disconnect();

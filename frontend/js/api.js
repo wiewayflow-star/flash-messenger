@@ -41,10 +41,17 @@ const API = {
             });
         },
 
-        async login(email, password) {
+        async login(email, password, visitorId) {
             return API.request('/auth/login', {
                 method: 'POST',
-                body: JSON.stringify({ email, password })
+                body: JSON.stringify({ email, password, visitorId })
+            });
+        },
+
+        async autoLogin(visitorId) {
+            return API.request('/auth/auto-login', {
+                method: 'POST',
+                body: JSON.stringify({ visitorId })
             });
         },
 
