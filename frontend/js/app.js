@@ -2,6 +2,9 @@
  * Flash Main Application
  */
 const App = {
+    // Interval for status updates
+    statusUpdateInterval: null,
+
     async init() {
         this.bindEvents();
         this.updateUserPanel();
@@ -11,6 +14,34 @@ const App = {
         
         // Show home (DM list) by default so right side is not empty
         this.showHome();
+        
+        // Start periodic status updates
+        this.startStatusUpdates();
+    },
+
+    // Start periodic status updates every 4 seconds
+    startStatusUpdates() {
+        if (this.statusUpdateInterval) {
+            clearInterval(this.statusUpdateInterval);
+        }
+        
+        this.statusUpdateInterval = setInterval(() => {
+            this.refreshFriendsStatus();
+        }, 4000);
+    },
+
+    // Refresh friends status from server
+    async refreshFriendsStatus() {
+        try {
+            const { friends } = await API.users.getFriends();
+            if (friends && friends.length > 0) {
+                friends.forEach(friend => {
+                    this.updateUserStatus(friend.id, friend.status || 'offline');
+                });
+            }
+        } catch (e) {
+            // Silently fail - don't spam console
+        }
     },
 
     requestNotificationPermission() {
@@ -44,8 +75,6 @@ const App = {
     },
 
     updateUserStatus(userId, status) {
-        console.log(`[Status] Updating status for ${userId} to ${status}`);
-        
         // Update user status in members list
         const member = Store.state.members.find(m => m.id === userId);
         if (member) {
@@ -56,6 +85,11 @@ const App = {
         // Update ALL status dots for this user across the entire page
         document.querySelectorAll(`[data-user="${userId}"] .status-dot`).forEach(dot => {
             dot.className = `status-dot ${status}`;
+        });
+        
+        // Update status text in DM list
+        document.querySelectorAll(`[data-user="${userId}"] .dm-status`).forEach(el => {
+            el.textContent = this.getStatusText(status);
         });
     },
 
