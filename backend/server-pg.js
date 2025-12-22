@@ -329,49 +329,6 @@ app.patch('/api/users/me', authenticate, async (req, res) => {
     }
 });
 
-app.get('/api/users/:userId', authenticate, async (req, res) => {
-    try {
-        const result = await pool.query('SELECT id, username, tag, avatar, banner, bio, status, created_at FROM users WHERE id = $1', [req.params.userId]);
-        if (result.rows.length === 0) {
-            return res.status(404).json({ error: true, message: 'Пользователь не найден' });
-        }
-        res.json({ user: result.rows[0] });
-    } catch (e) {
-        res.status(500).json({ error: true, message: 'Ошибка сервера' });
-    }
-});
-
-// ВАЖНО: /search должен быть ПЕРЕД /:userId
-app.get('/api/users/search', authenticate, async (req, res) => {
-    try {
-        const { q } = req.query;
-        if (!q || q.length < 2) return res.json({ users: [] });
-        
-        const query = q.toLowerCase().replace('@', '');
-        const result = await pool.query(
-            `SELECT id, username, tag, avatar, status FROM users 
-             WHERE (LOWER(username) LIKE $1 OR LOWER(username || tag) LIKE $1) AND id != $2 LIMIT 20`,
-            [`%${query}%`, req.user.id]
-        );
-        res.json({ users: result.rows });
-    } catch (e) {
-        console.error('Search error:', e);
-        res.status(500).json({ error: true, message: 'Ошибка сервера' });
-    }
-});
-
-app.get('/api/users/:userId', authenticate, async (req, res) => {
-    try {
-        const result = await pool.query('SELECT id, username, tag, avatar, banner, bio, status, created_at FROM users WHERE id = $1', [req.params.userId]);
-        if (result.rows.length === 0) {
-            return res.status(404).json({ error: true, message: 'Пользователь не найден' });
-        }
-        res.json({ user: result.rows[0] });
-    } catch (e) {
-        res.status(500).json({ error: true, message: 'Ошибка сервера' });
-    }
-});
-
 app.put('/api/users/me/public-key', authenticate, async (req, res) => {
     try {
         await pool.query('UPDATE users SET public_key = $1 WHERE id = $2', [req.body.publicKey, req.user.id]);
@@ -381,10 +338,43 @@ app.put('/api/users/me/public-key', authenticate, async (req, res) => {
     }
 });
 
+// ВАЖНО: /search ДОЛЖЕН быть ПЕРЕД /:userId !!!
+app.get('/api/users/search', authenticate, async (req, res) => {
+    try {
+        const { q } = req.query;
+        console.log('[Search] Query:', q);
+        if (!q || q.length < 2) return res.json({ users: [] });
+        
+        const query = q.toLowerCase().replace('@', '');
+        const result = await pool.query(
+            `SELECT id, username, tag, avatar, status FROM users 
+             WHERE (LOWER(username) LIKE $1 OR LOWER(username || tag) LIKE $1) AND id != $2 LIMIT 20`,
+            [`%${query}%`, req.user.id]
+        );
+        console.log('[Search] Found:', result.rows.length, 'users');
+        res.json({ users: result.rows });
+    } catch (e) {
+        console.error('Search error:', e);
+        res.status(500).json({ error: true, message: 'Ошибка сервера' });
+    }
+});
+
 app.get('/api/users/:userId/public-key', authenticate, async (req, res) => {
     try {
         const result = await pool.query('SELECT public_key FROM users WHERE id = $1', [req.params.userId]);
         res.json({ publicKey: result.rows[0]?.public_key || null });
+    } catch (e) {
+        res.status(500).json({ error: true, message: 'Ошибка сервера' });
+    }
+});
+
+app.get('/api/users/:userId', authenticate, async (req, res) => {
+    try {
+        const result = await pool.query('SELECT id, username, tag, avatar, banner, bio, status, created_at FROM users WHERE id = $1', [req.params.userId]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: true, message: 'Пользователь не найден' });
+        }
+        res.json({ user: result.rows[0] });
     } catch (e) {
         res.status(500).json({ error: true, message: 'Ошибка сервера' });
     }
