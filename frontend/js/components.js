@@ -221,13 +221,17 @@ const Components = {
         const totalSeconds = Math.floor(durationMs / 1000);
         const hours = Math.floor(totalSeconds / 3600);
         const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
         
-        // Less than 5 minutes
-        if (totalSeconds < 300) {
-            return 'несколько минут';
+        // Less than 1 minute - show seconds
+        if (totalSeconds < 60) {
+            if (totalSeconds < 5) {
+                return 'несколько секунд';
+            }
+            return `${totalSeconds} ${this.pluralize(totalSeconds, 'секунду', 'секунды', 'секунд')}`;
         }
         
-        // 5-59 minutes - show only minutes
+        // 1-59 minutes - show only minutes
         if (hours === 0) {
             return `${minutes} ${this.pluralize(minutes, 'минуту', 'минуты', 'минут')}`;
         }
