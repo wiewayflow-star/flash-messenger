@@ -942,6 +942,46 @@ wss.on('connection', (ws) => {
                     }
                     break;
 
+                // Screen share events
+                case 'screen_share_offer':
+                    if (userId && payload.targetUserId && payload.offer) {
+                        console.log(`[Screen] Forwarding screen share offer from ${userId} to ${payload.targetUserId}`);
+                        notifyUser(payload.targetUserId, {
+                            type: 'screen_share_offer',
+                            payload: { fromUserId: userId, offer: payload.offer }
+                        });
+                    }
+                    break;
+
+                case 'screen_share_answer':
+                    if (userId && payload.targetUserId && payload.answer) {
+                        console.log(`[Screen] Forwarding screen share answer from ${userId} to ${payload.targetUserId}`);
+                        notifyUser(payload.targetUserId, {
+                            type: 'screen_share_answer',
+                            payload: { fromUserId: userId, answer: payload.answer }
+                        });
+                    }
+                    break;
+
+                case 'screen_ice_candidate':
+                    if (userId && payload.targetUserId && payload.candidate) {
+                        notifyUser(payload.targetUserId, {
+                            type: 'screen_ice_candidate',
+                            payload: { fromUserId: userId, candidate: payload.candidate }
+                        });
+                    }
+                    break;
+
+                case 'screen_share_stop':
+                    if (userId && payload.targetUserId) {
+                        console.log(`[Screen] Screen share stopped by ${userId}`);
+                        notifyUser(payload.targetUserId, {
+                            type: 'screen_share_stop',
+                            payload: { fromUserId: userId }
+                        });
+                    }
+                    break;
+
                 case 'voice_speaking':
                     if (userId && payload.channelId) {
                         broadcastToVoiceChannel(payload.channelId, { type: 'voice_speaking', payload: { channelId: payload.channelId, userId, speaking: payload.speaking } }, userId);
