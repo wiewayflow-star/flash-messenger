@@ -1870,3 +1870,21 @@
     font-size: 12px;
     margin-bottom: 12px;
 }
+
+
+/* Back arrow in header */
+.back-arrow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.2s, transform 0.2s;
+}
+
+.back-arrow:hover {
+    opacity: 1 !important;
+    transform: translateX(-2px);
+}
+
+.back-arrow svg {
+    vertical-align: middle;
+}

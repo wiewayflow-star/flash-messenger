@@ -1213,6 +1213,16 @@ const App = {
         }
     },
 
+    // Go back from friends view
+    goBackFromFriends() {
+        // Hide chat area
+        Utils.$('.main-content')?.classList.add('no-chat');
+        Utils.$('#channel-name').textContent = '';
+        
+        // Show message input back (in case it was hidden)
+        Utils.$('.message-input-container')?.style.setProperty('display', '');
+    },
+
     // Friends view
     async showFriends() {
         Utils.$('#server-name').textContent = 'Друзья';
