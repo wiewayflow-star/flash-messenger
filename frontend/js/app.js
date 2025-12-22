@@ -1264,6 +1264,12 @@ const App = {
     async showFriends() {
         Utils.$('#server-name').textContent = 'Друзья';
         
+        // Hide voice/call panel when leaving chat (but don't end the call)
+        if (window.Voice) {
+            Voice.hideVoicePanel();
+            Voice.hideCallUI();
+        }
+        
         // Show chat area (remove no-chat class)
         Utils.$('.main-content')?.classList.remove('no-chat');
         
@@ -1496,6 +1502,11 @@ const App = {
             
             // Show call button in header
             this.showDMCallButton(otherUser);
+            
+            // Restore voice panel if there's an active call in this DM
+            if (window.Voice && Voice.currentCall && Voice.currentCall.dmId === dmChannel.id) {
+                Voice.showCallUI(otherUser, false);
+            }
             
         } catch (error) {
             console.error('Failed to open DM:', error);
