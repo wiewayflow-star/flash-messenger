@@ -1519,10 +1519,14 @@ wss.on('connection', (ws) => {
                 case 'screen_share_offer':
                     if (userId && payload.targetUserId && payload.offer) {
                         console.log(`[Screen] Forwarding screen share offer from ${userId} to ${payload.targetUserId}`);
+                        const targetWs = userConnections.get(payload.targetUserId);
+                        console.log(`[Screen] Target user WS exists: ${!!targetWs}`);
                         notifyUser(payload.targetUserId, {
                             type: 'screen_share_offer',
                             payload: { fromUserId: userId, offer: payload.offer }
                         });
+                    } else {
+                        console.log(`[Screen] Missing data: userId=${userId}, targetUserId=${payload.targetUserId}, offer=${!!payload.offer}`);
                     }
                     break;
 
