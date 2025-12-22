@@ -2224,6 +2224,10 @@ const Voice = {
             // Clear self disconnect timeout
             this.clearSelfDisconnectTimeout();
             
+            // Set callStartTime to mark that we're in a call (will be updated when partner accepts)
+            // This prevents the window from closing immediately if user exits during "Вызов..."
+            this.callStartTime = Date.now();
+            
             // Send rejoin/call request
             WS.send('dm_call_start', {
                 dmId: this.currentCall.dmId,
