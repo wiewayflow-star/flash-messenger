@@ -64,7 +64,10 @@ const WS = {
 
     send(type, payload) {
         if (this.socket?.readyState === WebSocket.OPEN) {
+            console.log('[WS] Sending:', type);
             this.socket.send(JSON.stringify({ type, payload }));
+        } else {
+            console.warn('[WS] Cannot send, socket not open:', type);
         }
     },
 
