@@ -272,7 +272,14 @@ const Voice = {
         this.localStream.getAudioTracks().forEach(track => track.enabled = false);
         this.isMuted = true;
         this.updateVoicePanelUI();
-        WS.send('voice_mute', { channelId: this.currentChannel, muted: true });
+        if (this.currentChannel) {
+            WS.send('voice_mute', { channelId: this.currentChannel, muted: true });
+        }
+        // Sync with App user panel
+        if (window.App) {
+            App.isGlobalMuted = true;
+            App.updateMuteButtonUI();
+        }
         console.log('[Voice] Muted');
     },
 
@@ -282,7 +289,14 @@ const Voice = {
         this.localStream.getAudioTracks().forEach(track => track.enabled = true);
         this.isMuted = false;
         this.updateVoicePanelUI();
-        WS.send('voice_mute', { channelId: this.currentChannel, muted: false });
+        if (this.currentChannel) {
+            WS.send('voice_mute', { channelId: this.currentChannel, muted: false });
+        }
+        // Sync with App user panel
+        if (window.App) {
+            App.isGlobalMuted = false;
+            App.updateMuteButtonUI();
+        }
         console.log('[Voice] Unmuted');
     },
 
@@ -297,8 +311,16 @@ const Voice = {
 
     // Deafen (mute all audio)
     deafen() {
+        // Remember mute state before deafen
+        if (window.App) {
+            App.wasMutedBeforeDeafen = this.isMuted;
+        }
+        
         this.isDeafened = true;
-        this.mute(); // Also mute when deafened
+        this.isMuted = true;
+        if (this.localStream) {
+            this.localStream.getAudioTracks().forEach(track => track.enabled = false);
+        }
         
         // Mute all peer audio
         for (const [peerId, peer] of this.peers) {
@@ -308,13 +330,30 @@ const Voice = {
         }
         
         this.updateVoicePanelUI();
-        WS.send('voice_deafen', { channelId: this.currentChannel, deafened: true });
+        if (this.currentChannel) {
+            WS.send('voice_deafen', { channelId: this.currentChannel, deafened: true });
+        }
+        // Sync with App user panel
+        if (window.App) {
+            App.isGlobalMuted = true;
+            App.isGlobalDeafened = true;
+            App.updateMuteButtonUI();
+            App.updateDeafenButtonUI();
+        }
         console.log('[Voice] Deafened');
     },
 
     // Undeafen
     undeafen() {
         this.isDeafened = false;
+        
+        // Restore previous mute state
+        const wasMuted = window.App ? App.wasMutedBeforeDeafen : false;
+        this.isMuted = wasMuted;
+        
+        if (this.localStream) {
+            this.localStream.getAudioTracks().forEach(track => track.enabled = !wasMuted);
+        }
         
         // Unmute all peer audio
         for (const [peerId, peer] of this.peers) {
@@ -324,7 +363,16 @@ const Voice = {
         }
         
         this.updateVoicePanelUI();
-        WS.send('voice_deafen', { channelId: this.currentChannel, deafened: false });
+        if (this.currentChannel) {
+            WS.send('voice_deafen', { channelId: this.currentChannel, deafened: false });
+        }
+        // Sync with App user panel
+        if (window.App) {
+            App.isGlobalMuted = wasMuted;
+            App.isGlobalDeafened = false;
+            App.updateMuteButtonUI();
+            App.updateDeafenButtonUI();
+        }
         console.log('[Voice] Undeafened');
     },
 

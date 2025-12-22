@@ -1656,25 +1656,32 @@ const App = {
     // Global mute state
     isGlobalMuted: false,
     isGlobalDeafened: false,
+    wasMutedBeforeDeafen: false, // Remember mute state before deafen
 
     // Toggle global mute (works even when not in a call)
     toggleGlobalMute() {
-        this.isGlobalMuted = !this.isGlobalMuted;
-        
-        // If deafened, unmute should also undeafen
-        if (!this.isGlobalMuted && this.isGlobalDeafened) {
-            this.isGlobalDeafened = false;
-            this.updateDeafenButtonUI();
+        // If deafened, just toggle the mute state but don't undeafen
+        if (this.isGlobalDeafened) {
+            this.isGlobalMuted = !this.isGlobalMuted;
+            this.wasMutedBeforeDeafen = this.isGlobalMuted;
+            this.updateMuteButtonUI();
+            Utils.storage.set('flash_global_muted', this.isGlobalMuted);
+            return;
         }
         
+        this.isGlobalMuted = !this.isGlobalMuted;
         this.updateMuteButtonUI();
         
         // Apply to Voice if in a call
-        if (window.Voice && Voice.currentChannel) {
-            if (this.isGlobalMuted) {
-                Voice.mute();
-            } else {
-                Voice.unmute();
+        if (window.Voice && (Voice.currentChannel || Voice.isDMCall)) {
+            Voice.isMuted = this.isGlobalMuted;
+            if (Voice.localStream) {
+                Voice.localStream.getAudioTracks().forEach(track => track.enabled = !this.isGlobalMuted);
+            }
+            Voice.updateVoicePanelUI();
+            // Notify server
+            if (Voice.currentChannel) {
+                WS.send('voice_mute', { channelId: Voice.currentChannel, muted: this.isGlobalMuted });
             }
         }
         
@@ -1684,27 +1691,72 @@ const App = {
 
     // Toggle global deafen (works even when not in a call)
     toggleGlobalDeafen() {
-        this.isGlobalDeafened = !this.isGlobalDeafened;
-        
-        // Deafen also mutes
-        if (this.isGlobalDeafened && !this.isGlobalMuted) {
-            this.isGlobalMuted = true;
+        if (!this.isGlobalDeafened) {
+            // Turning ON deafen
+            this.wasMutedBeforeDeafen = this.isGlobalMuted; // Remember current mute state
+            this.isGlobalDeafened = true;
+            this.isGlobalMuted = true; // Deafen always mutes
             this.updateMuteButtonUI();
-        }
-        
-        this.updateDeafenButtonUI();
-        
-        // Apply to Voice if in a call
-        if (window.Voice && Voice.currentChannel) {
-            if (this.isGlobalDeafened) {
-                Voice.deafen();
-            } else {
-                Voice.undeafen();
+            this.updateDeafenButtonUI();
+            
+            // Apply to Voice if in a call
+            if (window.Voice && (Voice.currentChannel || Voice.isDMCall)) {
+                Voice.isDeafened = true;
+                Voice.isMuted = true;
+                if (Voice.localStream) {
+                    Voice.localStream.getAudioTracks().forEach(track => track.enabled = false);
+                }
+                // Mute all peer audio
+                for (const [peerId, peer] of Voice.peers) {
+                    if (peer.audioElement) {
+                        peer.audioElement.muted = true;
+                    }
+                }
+                Voice.updateVoicePanelUI();
+                if (Voice.currentChannel) {
+                    WS.send('voice_deafen', { channelId: Voice.currentChannel, deafened: true });
+                }
+            }
+        } else {
+            // Turning OFF deafen
+            this.isGlobalDeafened = false;
+            this.isGlobalMuted = this.wasMutedBeforeDeafen; // Restore previous mute state
+            this.updateMuteButtonUI();
+            this.updateDeafenButtonUI();
+            
+            // Apply to Voice if in a call
+            if (window.Voice && (Voice.currentChannel || Voice.isDMCall)) {
+                Voice.isDeafened = false;
+                Voice.isMuted = this.isGlobalMuted;
+                if (Voice.localStream) {
+                    Voice.localStream.getAudioTracks().forEach(track => track.enabled = !this.isGlobalMuted);
+                }
+                // Unmute all peer audio
+                for (const [peerId, peer] of Voice.peers) {
+                    if (peer.audioElement) {
+                        peer.audioElement.muted = false;
+                    }
+                }
+                Voice.updateVoicePanelUI();
+                if (Voice.currentChannel) {
+                    WS.send('voice_deafen', { channelId: Voice.currentChannel, deafened: false });
+                }
             }
         }
         
         // Save state
+        Utils.storage.set('flash_global_muted', this.isGlobalMuted);
         Utils.storage.set('flash_global_deafened', this.isGlobalDeafened);
+    },
+
+    // Sync user panel buttons with Voice state (called from Voice)
+    syncFromVoice() {
+        if (window.Voice) {
+            this.isGlobalMuted = Voice.isMuted;
+            this.isGlobalDeafened = Voice.isDeafened;
+            this.updateMuteButtonUI();
+            this.updateDeafenButtonUI();
+        }
     },
 
     // Update mute button UI
