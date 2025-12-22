@@ -2,10 +2,11 @@
   "name": "flash-messenger",
   "version": "1.0.0",
   "description": "Flash - Modern Discord-like messenger",
-  "main": "backend/server-standalone.js",
+  "main": "backend/server-pg.js",
   "scripts": {
-    "start": "node backend/server-standalone.js",
-    "dev": "node backend/server-standalone.js"
+    "start": "node backend/server-pg.js",
+    "dev": "node backend/server-standalone.js",
+    "start:standalone": "node backend/server-standalone.js"
   },
   "engines": {
     "node": ">=18.0.0"
@@ -15,6 +16,7 @@
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "jsonwebtoken": "^9.0.2",
+    "pg": "^8.11.3",
     "uuid": "^9.0.0",
     "ws": "^8.14.2"
   },
