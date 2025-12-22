@@ -159,12 +159,17 @@ const Components = {
     // Search result
     searchResult(user) {
         const initial = Utils.getInitials(user.username);
+        const avatarStyle = user.avatar 
+            ? `background-image: url(${user.avatar}); background-size: cover;`
+            : `background: ${Utils.getUserColor(user.id)}`;
         return `
-            <div class="search-result search-result-item" data-user="${user.id}">
-                <div class="search-result-avatar" style="background: ${Utils.getUserColor(user.id)}">${initial}</div>
-                <div class="search-result-info">
-                    <div class="search-result-name">${Utils.escapeHtml(user.username)}</div>
-                    <div class="search-result-tag">${user.tag}</div>
+            <div class="search-result-wrapper" data-user="${user.id}">
+                <div class="search-result search-result-item">
+                    <div class="search-result-avatar" style="${avatarStyle}">${user.avatar ? '' : initial}</div>
+                    <div class="search-result-info">
+                        <div class="search-result-name">${Utils.escapeHtml(user.username)}</div>
+                        <div class="search-result-tag">${user.tag}</div>
+                    </div>
                 </div>
             </div>
         `;

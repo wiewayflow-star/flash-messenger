@@ -958,13 +958,41 @@ const App = {
     async sendFriendRequest() {
         if (!this.currentProfileUserId) return;
 
+        const addFriendBtn = Utils.$('#add-friend-btn');
+        const originalText = addFriendBtn.textContent;
+        
         try {
+            // Disable button and show loading
+            addFriendBtn.disabled = true;
+            addFriendBtn.textContent = 'Отправка...';
+            
             await API.friends.sendRequest(this.currentProfileUserId);
-            alert('Запрос в друзья отправлен!');
-            this.hideModal('user-profile-modal');
+            
+            // Show success animation
+            addFriendBtn.innerHTML = `
+                <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; stroke: currentColor; stroke-width: 3; fill: none; margin-right: 8px;">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                Запрос отправлен
+            `;
+            addFriendBtn.className = 'btn btn-success';
+            addFriendBtn.style.pointerEvents = 'none';
+            
+            // Close modal after delay
+            setTimeout(() => {
+                this.hideModal('user-profile-modal');
+            }, 1500);
         } catch (error) {
             console.error('Failed to send friend request:', error);
-            alert(error.message || 'Ошибка отправки запроса');
+            addFriendBtn.textContent = originalText;
+            addFriendBtn.disabled = false;
+            // Show error inline instead of alert
+            addFriendBtn.textContent = error.message || 'Ошибка';
+            addFriendBtn.className = 'btn btn-danger';
+            setTimeout(() => {
+                addFriendBtn.textContent = originalText;
+                addFriendBtn.className = 'btn btn-success';
+            }, 2000);
         }
     },
 
@@ -972,13 +1000,32 @@ const App = {
         if (!this.currentProfileUserId) return;
         if (!confirm('Удалить из друзей?')) return;
         
+        const btn = Utils.$('#add-friend-btn');
+        
         try {
+            btn.disabled = true;
+            btn.textContent = 'Удаление...';
+            
             await API.friends.remove(this.currentProfileUserId);
-            alert('Удалено из друзей');
-            this.hideModal('user-profile-modal');
+            
+            // Show success
+            btn.innerHTML = `
+                <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; stroke: currentColor; stroke-width: 3; fill: none; margin-right: 8px;">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                Удалено
+            `;
+            
+            setTimeout(() => {
+                this.hideModal('user-profile-modal');
+            }, 1000);
         } catch (error) {
             console.error('Failed to remove friend:', error);
-            alert('Ошибка удаления друга');
+            btn.textContent = 'Ошибка';
+            setTimeout(() => {
+                btn.textContent = 'Удалить из друзей';
+                btn.disabled = false;
+            }, 2000);
         }
     },
 
