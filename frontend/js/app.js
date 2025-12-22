@@ -260,10 +260,10 @@ const App = {
 
         // Search results click (event delegation)
         document.addEventListener('click', (e) => {
-            const resultItem = e.target.closest('.search-result');
-            if (resultItem) {
-                const userId = resultItem.dataset.user;
-                this.showUserProfile(userId);
+            const resultWrapper = e.target.closest('.search-result-wrapper');
+            if (resultWrapper) {
+                const userId = resultWrapper.dataset.user;
+                if (userId) this.showUserProfile(userId);
             }
         });
 
