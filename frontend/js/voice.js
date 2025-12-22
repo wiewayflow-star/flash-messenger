@@ -425,7 +425,7 @@ const Voice = {
         this.updateCallUIButtons();
     },
 
-    // Toggle screen sharing
+    // Toggle screen sharing with separate peer connection for video
     async toggleScreenShare() {
         if (this.isScreenSharing) {
             // Stop screen sharing
@@ -433,17 +433,13 @@ const Voice = {
                 this.screenStream.getTracks().forEach(track => track.stop());
             }
             
-            // Remove video track from peers
-            for (const [peerId, peer] of this.peers) {
-                if (peer.screenSender) {
-                    try {
-                        peer.connection.removeTrack(peer.screenSender);
-                        peer.screenSender = null;
-                    } catch (e) {
-                        console.error('[Voice] Failed to remove screen track:', e);
-                    }
+            // Close screen share peer connections
+            for (const [peerId, screenPeer] of this.screenPeers || new Map()) {
+                if (screenPeer.connection) {
+                    screenPeer.connection.close();
                 }
             }
+            this.screenPeers = new Map();
             
             this.screenStream = null;
             this.isScreenSharing = false;
@@ -456,6 +452,11 @@ const Voice = {
             const callContainer = document.getElementById('embedded-call');
             if (callContainer) {
                 callContainer.classList.remove('has-screen-share');
+            }
+            
+            // Notify peers
+            for (const [peerId] of this.peers) {
+                WS.send('screen_share_stop', { targetUserId: peerId });
             }
             
             this.updateCallUIButtons();
@@ -476,15 +477,13 @@ const Voice = {
                 screenTrack.onended = () => {
                     this.isScreenSharing = false;
                     
-                    // Remove video track from peers
-                    for (const [peerId, peer] of this.peers) {
-                        if (peer.screenSender) {
-                            try {
-                                peer.connection.removeTrack(peer.screenSender);
-                                peer.screenSender = null;
-                            } catch (e) {}
+                    // Close screen share peer connections
+                    for (const [peerId, screenPeer] of this.screenPeers || new Map()) {
+                        if (screenPeer.connection) {
+                            screenPeer.connection.close();
                         }
                     }
+                    this.screenPeers = new Map();
                     
                     this.screenStream = null;
                     const screenVideo = document.getElementById('screen-share-video');
@@ -493,25 +492,27 @@ const Voice = {
                     if (callContainer) {
                         callContainer.classList.remove('has-screen-share');
                     }
+                    
+                    // Notify peers
+                    for (const [peerId] of this.peers) {
+                        WS.send('screen_share_stop', { targetUserId: peerId });
+                    }
+                    
                     this.updateCallUIButtons();
                 };
                 
-                // Show local preview of screen share
+                // Show local preview
                 this.showScreenSharePreview(this.screenStream);
                 
-                // Add video track to peer connections
-                for (const [peerId, peer] of this.peers) {
-                    try {
-                        // Add screen track
-                        peer.screenSender = peer.connection.addTrack(screenTrack, this.screenStream);
-                        console.log('[Voice] Added screen track to peer:', peerId);
-                    } catch (e) {
-                        console.error('[Voice] Failed to add screen track:', e);
-                    }
+                // Create separate peer connections for screen share
+                this.screenPeers = new Map();
+                for (const [peerId] of this.peers) {
+                    await this.createScreenSharePeer(peerId, screenTrack);
                 }
                 
                 this.isScreenSharing = true;
                 this.updateCallUIButtons();
+                console.log('[Voice] Screen sharing started');
                 
             } catch (e) {
                 console.error('[Voice] Failed to share screen:', e);
@@ -519,6 +520,130 @@ const Voice = {
                     alert('Не удалось начать демонстрацию экрана');
                 }
             }
+        }
+    },
+
+    // Create separate peer connection for screen share
+    async createScreenSharePeer(peerId, screenTrack) {
+        const config = {
+            iceServers: CONFIG.ICE_SERVERS || [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' }
+            ]
+        };
+
+        const connection = new RTCPeerConnection(config);
+        
+        // Add screen track
+        connection.addTrack(screenTrack, this.screenStream);
+
+        // Handle ICE candidates
+        connection.onicecandidate = (event) => {
+            if (event.candidate) {
+                WS.send('screen_ice_candidate', {
+                    targetUserId: peerId,
+                    candidate: event.candidate
+                });
+            }
+        };
+
+        this.screenPeers.set(peerId, { connection });
+
+        // Create and send offer
+        try {
+            const offer = await connection.createOffer();
+            await connection.setLocalDescription(offer);
+            WS.send('screen_share_offer', {
+                targetUserId: peerId,
+                offer: connection.localDescription
+            });
+        } catch (e) {
+            console.error('[Voice] Failed to create screen share offer:', e);
+        }
+    },
+
+    // Handle incoming screen share offer
+    async handleScreenShareOffer(fromUserId, offer) {
+        console.log('[Voice] Received screen share offer from:', fromUserId);
+        
+        const config = {
+            iceServers: CONFIG.ICE_SERVERS || [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' }
+            ]
+        };
+
+        const connection = new RTCPeerConnection(config);
+        
+        // Handle incoming video track
+        connection.ontrack = (event) => {
+            console.log('[Voice] Received screen share track');
+            const stream = event.streams[0];
+            if (stream) {
+                this.showRemoteScreenShare(fromUserId, stream);
+            }
+        };
+
+        // Handle ICE candidates
+        connection.onicecandidate = (event) => {
+            if (event.candidate) {
+                WS.send('screen_ice_candidate', {
+                    targetUserId: fromUserId,
+                    candidate: event.candidate
+                });
+            }
+        };
+
+        if (!this.screenPeers) this.screenPeers = new Map();
+        this.screenPeers.set(fromUserId, { connection });
+
+        try {
+            await connection.setRemoteDescription(new RTCSessionDescription(offer));
+            const answer = await connection.createAnswer();
+            await connection.setLocalDescription(answer);
+            WS.send('screen_share_answer', {
+                targetUserId: fromUserId,
+                answer: connection.localDescription
+            });
+        } catch (e) {
+            console.error('[Voice] Failed to handle screen share offer:', e);
+        }
+    },
+
+    // Handle screen share answer
+    async handleScreenShareAnswer(fromUserId, answer) {
+        const screenPeer = this.screenPeers?.get(fromUserId);
+        if (!screenPeer) return;
+
+        try {
+            await screenPeer.connection.setRemoteDescription(new RTCSessionDescription(answer));
+            console.log('[Voice] Screen share connection established with:', fromUserId);
+        } catch (e) {
+            console.error('[Voice] Failed to set screen share answer:', e);
+        }
+    },
+
+    // Handle screen share ICE candidate
+    async handleScreenIceCandidate(fromUserId, candidate) {
+        const screenPeer = this.screenPeers?.get(fromUserId);
+        if (!screenPeer) return;
+
+        try {
+            await screenPeer.connection.addIceCandidate(new RTCIceCandidate(candidate));
+        } catch (e) {
+            console.error('[Voice] Failed to add screen ICE candidate:', e);
+        }
+    },
+
+    // Handle screen share stop
+    handleScreenShareStop(fromUserId) {
+        console.log('[Voice] Screen share stopped by:', fromUserId);
+        this.hideRemoteScreenShare();
+        
+        const screenPeer = this.screenPeers?.get(fromUserId);
+        if (screenPeer?.connection) {
+            screenPeer.connection.close();
+            this.screenPeers.delete(fromUserId);
         }
     },
 
@@ -633,25 +758,6 @@ const Voice = {
             }
             if (connection.connectionState === 'disconnected' || connection.connectionState === 'failed') {
                 this.closePeer(peerId);
-            }
-        };
-
-        // Handle negotiation needed (for adding screen share track)
-        connection.onnegotiationneeded = async () => {
-            console.log('[Voice] Negotiation needed for peer:', peerId);
-            // Only renegotiate if we're already connected
-            if (connection.signalingState === 'stable') {
-                try {
-                    const offer = await connection.createOffer();
-                    await connection.setLocalDescription(offer);
-                    WS.send('voice_offer', {
-                        channelId: this.currentChannel || null,
-                        targetUserId: peerId,
-                        offer: connection.localDescription
-                    });
-                } catch (e) {
-                    console.error('[Voice] Renegotiation failed:', e);
-                }
             }
         };
 

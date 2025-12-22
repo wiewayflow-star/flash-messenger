@@ -338,6 +338,35 @@ const WS = {
                 }
                 break;
 
+            // Screen share events
+            case 'screen_share_offer':
+                console.log('[Voice WS] Received screen share offer from:', payload.fromUserId);
+                if (window.Voice) {
+                    Voice.handleScreenShareOffer(payload.fromUserId, payload.offer);
+                }
+                break;
+
+            case 'screen_share_answer':
+                console.log('[Voice WS] Received screen share answer from:', payload.fromUserId);
+                if (window.Voice) {
+                    Voice.handleScreenShareAnswer(payload.fromUserId, payload.answer);
+                }
+                break;
+
+            case 'screen_ice_candidate':
+                console.log('[Voice WS] Received screen ICE candidate from:', payload.fromUserId);
+                if (window.Voice) {
+                    Voice.handleScreenIceCandidate(payload.fromUserId, payload.candidate);
+                }
+                break;
+
+            case 'screen_share_stop':
+                console.log('[Voice WS] Screen share stopped by:', payload.fromUserId);
+                if (window.Voice) {
+                    Voice.handleScreenShareStop(payload.fromUserId);
+                }
+                break;
+
             case 'voice_speaking':
                 if (window.Voice && Voice.currentChannel === payload.channelId) {
                     Voice.handleUserSpeaking(payload.userId, payload.speaking);
