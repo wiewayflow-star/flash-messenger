@@ -2035,10 +2035,11 @@ const Voice = {
             </div>
             <div class="embedded-call-participants" id="call-participants">
                 ${participants.map(p => `
-                    <div class="embedded-call-participant ${p.isMe ? 'me' : ''}" data-user-id="${p.id}">
+                    <div class="embedded-call-participant ${p.isMe ? 'me' : ''}" data-user-id="${p.id}" data-voice-user="${p.id}">
                         <div class="embedded-call-avatar" style="${p.avatar ? `background-image: url(${p.avatar}); background-size: cover; background-position: center;` : `background: ${Utils.getUserColor(p.id)};`}">
                             ${p.avatar ? '' : Utils.getInitials(p.username)}
                         </div>
+                        <span class="embedded-call-participant-name">${Utils.escapeHtml(p.username)}</span>
                     </div>
                 `).join('')}
             </div>
