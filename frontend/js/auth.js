@@ -66,7 +66,19 @@ const Auth = {
     },
 
     async checkAuth() {
-        // First try auto-login by device
+        // First try token-based auth (faster)
+        if (Store.state.token) {
+            try {
+                const { user } = await API.auth.me();
+                Store.setUser(user, Store.state.token);
+                this.onAuthSuccess();
+                return;
+            } catch (error) {
+                Store.clearUser();
+            }
+        }
+        
+        // Then try auto-login by device (only if no token)
         const visitorId = this.getVisitorId();
         
         try {
@@ -74,21 +86,9 @@ const Auth = {
             Store.setUser(user, token);
             this.onAuthSuccess();
             console.log('[Auth] Автоматический вход успешен');
-            return;
         } catch (e) {
-            // Auto-login failed, try token
-            console.log('[Auth] Автовход не удался, проверяем токен...');
-        }
-        
-        // Fall back to token check
-        if (!Store.state.token) return;
-
-        try {
-            const { user } = await API.auth.me();
-            Store.setUser(user, Store.state.token);
-            this.onAuthSuccess();
-        } catch (error) {
-            Store.clearUser();
+            // Auto-login failed - that's OK, user will login manually
+            console.log('[Auth] Автовход не удался, требуется ручной вход');
         }
     },
 
