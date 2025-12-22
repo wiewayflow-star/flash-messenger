@@ -19,13 +19,35 @@ const App = {
         }
     },
 
-    updateFriendRequestsBadge() {
+    async updateFriendRequestsBadge() {
         // This can be called to update UI when new friend request arrives
         // Auto-refresh friends page if currently viewing it
         const messagesContainer = Utils.$('#messages-list');
         if (messagesContainer && messagesContainer.querySelector('.friends-container')) {
             console.log('Auto-refreshing friends list due to new request');
             this.showFriends();
+        }
+        
+        // Update badge on "Друзья" button
+        try {
+            const { incoming } = await API.friends.getRequests();
+            const existingBadge = document.querySelector('.friend-requests-badge');
+            
+            if (incoming && incoming.length > 0) {
+                const badgeText = incoming.length > 99 ? '99+' : incoming.length;
+                if (existingBadge) {
+                    existingBadge.textContent = badgeText;
+                } else {
+                    // Refresh home to show badge
+                    if (!Store.state.currentServer && !Store.state.currentDM) {
+                        this.showHome();
+                    }
+                }
+            } else if (existingBadge) {
+                existingBadge.remove();
+            }
+        } catch (e) {
+            console.error('Failed to update friend requests badge:', e);
         }
     },
 
@@ -861,24 +883,27 @@ const App = {
                 `;
             }
             
+            // Get friend requests count for badge
+            let friendRequestsBadge = '';
+            try {
+                const { incoming } = await API.friends.getRequests();
+                if (incoming && incoming.length > 0) {
+                    friendRequestsBadge = `<span class="friend-requests-badge">${incoming.length > 99 ? '99+' : incoming.length}</span>`;
+                }
+            } catch (e) {}
+            
             Utils.$('#channel-list').innerHTML = `
                 <button class="btn btn-primary" style="width: 100%; margin-bottom: 8px;" onclick="App.showHome()">
                     Обновить
                 </button>
-                <button class="btn btn-secondary" style="width: 100%; margin-bottom: 8px;" onclick="App.showModal('search-modal')">
-                    Найти людей
-                </button>
-                <button class="btn btn-secondary" style="width: 100%; margin-bottom: 16px;" onclick="App.showFriends()">
-                    Друзья
+                <button class="btn btn-secondary" style="width: 100%; margin-bottom: 16px; position: relative;" onclick="App.showFriends()">
+                    Друзья${friendRequestsBadge}
                 </button>
                 <div class="dm-list">${dmListHtml}</div>
             `;
         } catch (error) {
             console.error('Failed to load friends:', error);
             Utils.$('#channel-list').innerHTML = `
-                <button class="btn btn-primary" style="width: 100%; margin-bottom: 8px;" onclick="App.showModal('search-modal')">
-                    Найти людей
-                </button>
                 <button class="btn btn-secondary" style="width: 100%; margin-bottom: 16px;" onclick="App.showFriends()">
                     Друзья
                 </button>

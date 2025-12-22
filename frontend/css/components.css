@@ -1100,6 +1100,24 @@
     }
 }
 
+/* Friend Requests Badge */
+.friend-requests-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    margin-left: 8px;
+    background: #f04747;
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    border-radius: 9px;
+    box-shadow: 0 0 8px rgba(240, 71, 71, 0.6);
+    animation: unreadPulse 2s ease-in-out infinite;
+}
+
 /* ============ SCROLLBAR ============ */
 
 ::-webkit-scrollbar {
