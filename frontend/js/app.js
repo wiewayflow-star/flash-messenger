@@ -20,14 +20,6 @@ const App = {
     },
 
     async updateFriendRequestsBadge() {
-        // This can be called to update UI when new friend request arrives
-        // Auto-refresh friends page if currently viewing it
-        const messagesContainer = Utils.$('#messages-list');
-        if (messagesContainer && messagesContainer.querySelector('.friends-container')) {
-            console.log('Auto-refreshing friends list due to new request');
-            this.showFriends();
-        }
-        
         // Update badge on "Друзья" button
         try {
             const { incoming } = await API.friends.getRequests();
@@ -1363,8 +1355,13 @@ const App = {
             // Hide message input (this is not a chat)
             Utils.$('.message-input-container')?.style.setProperty('display', 'none');
             
-            // Update badge
-            this.updateFriendRequestsBadge();
+            // Update badge count only (without triggering refresh)
+            const badgeEl = document.querySelector('.friend-requests-badge');
+            if (badgeEl && incoming.length === 0) {
+                badgeEl.remove();
+            } else if (badgeEl) {
+                badgeEl.textContent = incoming.length > 99 ? '99+' : incoming.length;
+            }
         } catch (error) {
             console.error('Failed to load friends:', error);
             Utils.$('#messages-list').innerHTML = '<p style="color: var(--danger); text-align: center; padding: 20px;">Ошибка загрузки друзей</p>';
