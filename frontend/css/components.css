@@ -186,9 +186,8 @@
 }
 
 .channel-item:hover {
-    background: var(--bg-hover);
+    background: rgba(79, 84, 92, 0.4);
     color: var(--text-primary);
-    transform: translateX(4px);
 }
 
 .channel-item.active {
@@ -293,7 +292,7 @@
 }
 
 .icon-btn:hover {
-    background: var(--bg-hover);
+    background: rgba(79, 84, 92, 0.6);
     color: var(--text-primary);
     transform: scale(1.1);
 }
@@ -601,8 +600,7 @@
 }
 
 .member-item:hover {
-    background: var(--bg-hover);
-    transform: translateX(4px);
+    background: rgba(79, 84, 92, 0.4);
 }
 
 .member-avatar {
@@ -768,9 +766,8 @@
 }
 
 .settings-tab:hover {
-    background: var(--bg-hover);
+    background: rgba(79, 84, 92, 0.4);
     color: var(--text-primary);
-    transform: translateX(4px);
 }
 
 .settings-tab.active {
@@ -1933,14 +1930,14 @@
 
 .user-info {
     cursor: pointer;
-    border-radius: 4px;
-    padding: 4px;
-    margin: -4px;
+    border-radius: 6px;
+    padding: 6px 8px;
+    margin: -6px -8px;
     transition: background 0.15s ease;
 }
 
 .user-info:hover {
-    background: var(--bg-modifier-hover);
+    background: rgba(79, 84, 92, 0.6);
 }
 
 .user-mini-profile {
