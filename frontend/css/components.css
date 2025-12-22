@@ -639,7 +639,11 @@
 }
 .status-dot.idle { background: var(--idle); }
 .status-dot.dnd { background: var(--dnd); }
-.status-dot.offline { background: var(--offline); }
+.status-dot.offline { 
+    background: transparent;
+    border: 3px solid var(--offline) !important;
+    box-sizing: border-box;
+}
 
 .member-name {
     font-size: 14px;
@@ -1298,6 +1302,16 @@
     color: white;
     position: relative;
     flex-shrink: 0;
+}
+
+.friend-avatar .status-dot {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 3px solid var(--bg-secondary);
 }
 
 .friend-info {

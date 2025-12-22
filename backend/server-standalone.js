@@ -1173,6 +1173,8 @@ function notifyUser(userId, message) {
 }
 
 function broadcastStatusUpdate(userId, status) {
+    console.log(`[Status] Broadcasting status update: ${userId} -> ${status}`);
+    
     // Find all friends of this user
     const friendIds = new Set();
     for (const friendship of DB.friends.values()) {
@@ -1182,6 +1184,8 @@ function broadcastStatusUpdate(userId, status) {
             friendIds.add(friendship.user1_id);
         }
     }
+    
+    console.log(`[Status] Found ${friendIds.size} friends to notify`);
 
     // Notify all friends about status change
     const message = {
@@ -1190,20 +1194,26 @@ function broadcastStatusUpdate(userId, status) {
     };
 
     friendIds.forEach(friendId => {
+        console.log(`[Status] Notifying friend: ${friendId}`);
         notifyUser(friendId, message);
     });
 
     // Also broadcast to all servers where user is a member
+    const notifiedServerMembers = new Set();
     for (const member of DB.serverMembers.values()) {
         if (member.user_id === userId) {
             // Get all members of this server
             for (const serverMember of DB.serverMembers.values()) {
                 if (serverMember.server_id === member.server_id && serverMember.user_id !== userId) {
-                    notifyUser(serverMember.user_id, message);
+                    if (!notifiedServerMembers.has(serverMember.user_id)) {
+                        notifiedServerMembers.add(serverMember.user_id);
+                        notifyUser(serverMember.user_id, message);
+                    }
                 }
             }
         }
     }
+    console.log(`[Status] Notified ${notifiedServerMembers.size} server members`);
 }
 
 function broadcastToServer(serverId, message, excludeUserId = null) {

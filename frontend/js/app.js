@@ -44,6 +44,8 @@ const App = {
     },
 
     updateUserStatus(userId, status) {
+        console.log(`[Status] Updating status for ${userId} to ${status}`);
+        
         // Update user status in members list
         const member = Store.state.members.find(m => m.id === userId);
         if (member) {
@@ -51,14 +53,10 @@ const App = {
             this.renderMembers();
         }
 
-        // Update in friends list if visible
-        const friendElement = document.querySelector(`[data-user="${userId}"]`);
-        if (friendElement) {
-            const statusDot = friendElement.querySelector('.status-dot');
-            if (statusDot) {
-                statusDot.className = `status-dot ${status}`;
-            }
-        }
+        // Update ALL status dots for this user across the entire page
+        document.querySelectorAll(`[data-user="${userId}"] .status-dot`).forEach(dot => {
+            dot.className = `status-dot ${status}`;
+        });
     },
 
     bindEvents() {
@@ -1303,7 +1301,7 @@ const App = {
                     <div class="friends-section">
                         <h3 style="color: var(--text-primary); margin-bottom: 12px;">Все друзья (${friends.length})</h3>
                         ${friends.map(friend => `
-                            <div class="friend-item">
+                            <div class="friend-item" data-user="${friend.id}">
                                 <div class="friend-avatar" style="background: ${Utils.getUserColor(friend.id)}">
                                     ${Utils.getInitials(friend.username)}
                                     <span class="status-dot ${friend.status || 'offline'}"></span>
