@@ -1377,3 +1377,76 @@
     font-size: 11px;
     color: var(--text-muted);
 }
+
+
+/* ============ NEW CALL CONTROLS BAR (Discord-style) ============ */
+
+.embedded-call-controls-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: var(--bg-primary);
+    border-top: 1px solid var(--border-color);
+}
+
+.call-controls-group {
+    display: flex;
+    align-items: center;
+    background: var(--bg-tertiary);
+    border-radius: 8px;
+    padding: 4px;
+    gap: 2px;
+}
+
+.call-control-button {
+    width: 40px;
+    height: 40px;
+    border-radius: 6px;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+}
+
+.call-control-button:hover {
+    background: var(--bg-modifier-hover);
+    color: var(--text-primary);
+}
+
+.call-control-button.active {
+    background: rgba(240, 71, 71, 0.2);
+    color: #f04747;
+}
+
+.call-control-button.active:hover {
+    background: rgba(240, 71, 71, 0.3);
+}
+
+.call-control-button.end-call {
+    width: 52px;
+    height: 40px;
+    background: #f04747;
+    color: white;
+    border-radius: 8px;
+    margin-left: 8px;
+}
+
+.call-control-button.end-call:hover {
+    background: #d93636;
+}
+
+/* Update embedded call container for new layout */
+.embedded-call-container {
+    min-height: 200px;
+}
+
+.embedded-call-participants {
+    flex: 1;
+    padding-bottom: 0;
+}

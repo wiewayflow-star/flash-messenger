@@ -385,6 +385,88 @@ const Voice = {
         }
     },
 
+    // Toggle camera
+    async toggleCamera() {
+        if (this.isCameraOn) {
+            // Turn off camera
+            if (this.localStream) {
+                this.localStream.getVideoTracks().forEach(track => {
+                    track.stop();
+                    this.localStream.removeTrack(track);
+                });
+            }
+            this.isCameraOn = false;
+        } else {
+            // Turn on camera
+            try {
+                const videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                const videoTrack = videoStream.getVideoTracks()[0];
+                
+                if (this.localStream) {
+                    this.localStream.addTrack(videoTrack);
+                }
+                
+                // Add to peer connections
+                for (const [peerId, peer] of this.peers) {
+                    const sender = peer.connection.getSenders().find(s => s.track?.kind === 'video');
+                    if (sender) {
+                        sender.replaceTrack(videoTrack);
+                    } else {
+                        peer.connection.addTrack(videoTrack, this.localStream);
+                    }
+                }
+                
+                this.isCameraOn = true;
+            } catch (e) {
+                console.error('[Voice] Failed to enable camera:', e);
+                alert('Не удалось включить камеру');
+            }
+        }
+        this.updateCallUIButtons();
+    },
+
+    // Toggle screen sharing
+    async toggleScreenShare() {
+        if (this.isScreenSharing) {
+            // Stop screen sharing
+            if (this.screenStream) {
+                this.screenStream.getTracks().forEach(track => track.stop());
+                this.screenStream = null;
+            }
+            this.isScreenSharing = false;
+        } else {
+            // Start screen sharing
+            try {
+                this.screenStream = await navigator.mediaDevices.getDisplayMedia({ 
+                    video: true,
+                    audio: false 
+                });
+                
+                const screenTrack = this.screenStream.getVideoTracks()[0];
+                
+                // Handle when user stops sharing via browser UI
+                screenTrack.onended = () => {
+                    this.isScreenSharing = false;
+                    this.screenStream = null;
+                    this.updateCallUIButtons();
+                };
+                
+                // Add to peer connections
+                for (const [peerId, peer] of this.peers) {
+                    peer.connection.addTrack(screenTrack, this.screenStream);
+                }
+                
+                this.isScreenSharing = true;
+            } catch (e) {
+                console.error('[Voice] Failed to share screen:', e);
+                if (e.name !== 'NotAllowedError') {
+                    alert('Не удалось начать демонстрацию экрана');
+                }
+            }
+        }
+        this.updateCallUIButtons();
+    },
+
     // Create peer connection for a user
     async createPeerConnection(peerId, isInitiator = false) {
         // Check if already exists
@@ -871,6 +953,24 @@ const Voice = {
         const muteBtn = document.getElementById('call-mute-btn');
         if (muteBtn) {
             muteBtn.classList.toggle('active', this.isMuted);
+            muteBtn.innerHTML = `
+                <svg viewBox="0 0 24 24" width="20" height="20">
+                    ${this.isMuted ? 
+                        '<path fill="currentColor" d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02.17c0-.06.02-.11.02-.17V5c0-1.66-1.34-3-3-3S9 3.34 9 5v.18l5.98 5.99zM4.27 3L3 4.27l6.01 6.01V11c0 1.66 1.33 3 2.99 3 .22 0 .44-.03.65-.08l1.66 1.66c-.71.33-1.5.52-2.31.52-2.76 0-5.3-2.1-5.3-5.1H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c.91-.13 1.77-.45 2.54-.9L19.73 21 21 19.73 4.27 3z"/>' :
+                        '<path fill="currentColor" d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/>'
+                    }
+                </svg>
+            `;
+        }
+        
+        const cameraBtn = document.getElementById('call-camera-btn');
+        if (cameraBtn) {
+            cameraBtn.classList.toggle('active', this.isCameraOn);
+        }
+        
+        const screenBtn = document.getElementById('call-screen-btn');
+        if (screenBtn) {
+            screenBtn.classList.toggle('active', this.isScreenSharing);
         }
     },
 
@@ -1565,11 +1665,11 @@ const Voice = {
         const container = document.createElement('div');
         container.className = 'embedded-call-container';
         container.id = 'embedded-call';
-        container.style.height = '200px'; // Default height
+        container.style.height = '280px'; // Default height
         
         const participants = [
-            { id: Store.state.user?.id, username: Store.state.user?.username, isMe: true },
-            { id: user.id, username: user.username, isMe: false }
+            { id: Store.state.user?.id, username: Store.state.user?.username, avatar: Store.state.user?.avatar, isMe: true },
+            { id: user.id, username: user.username, avatar: user.avatar, isMe: false }
         ];
 
         container.innerHTML = `
@@ -1580,34 +1680,10 @@ const Voice = {
                         <span class="embedded-call-title">${isCalling ? 'Вызов...' : 'Звонок'}</span>
                     </div>
                     <span class="embedded-call-timer" id="call-timer">00:00</span>
-                    <div class="embedded-call-mini-avatars">
-                        ${participants.map(p => `
-                            <div class="embedded-call-mini-avatar" data-user-id="${p.id}" style="background: ${Utils.getUserColor(p.id)}">
-                                ${Utils.getInitials(p.username)}
-                            </div>
-                        `).join('')}
-                    </div>
                 </div>
-                <div class="embedded-call-actions">
-                    <div class="embedded-call-size-controls">
-                        <button class="size-btn" id="call-fullscreen-btn" title="На весь экран">
-                            <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M5 5h5V3H3v7h2V5zm9-2v2h5v5h2V3h-7zm7 14h-2v5h-5v2h7v-7zM5 19v-5H3v7h7v-2H5z"/></svg>
-                        </button>
-                    </div>
-                    <button class="embedded-call-btn" id="call-add-people-btn" title="Добавить людей">
-                        <svg viewBox="0 0 24 24" width="18" height="18">
-                            <path fill="currentColor" d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-                        </svg>
-                    </button>
-                    <button class="embedded-call-btn ${this.isMuted ? 'active' : ''}" id="call-mute-btn" title="Микрофон">
-                        <svg viewBox="0 0 24 24" width="18" height="18">
-                            <path fill="currentColor" d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/>
-                        </svg>
-                    </button>
-                    <button class="embedded-call-btn end-call" id="call-end-btn" title="Завершить">
-                        <svg viewBox="0 0 24 24" width="18" height="18">
-                            <path fill="currentColor" d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08c-.18-.17-.29-.42-.29-.7 0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28-.79-.74-1.69-1.36-2.67-1.85-.33-.16-.56-.5-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z"/>
-                        </svg>
+                <div class="embedded-call-size-controls">
+                    <button class="size-btn" id="call-fullscreen-btn" title="На весь экран">
+                        <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M5 5h5V3H3v7h2V5zm9-2v2h5v5h2V3h-7zm7 14h-2v5h-5v2h7v-7zM5 19v-5H3v7h7v-2H5z"/></svg>
                     </button>
                 </div>
             </div>
@@ -1620,6 +1696,38 @@ const Voice = {
                         <span class="embedded-call-participant-name">${Utils.escapeHtml(p.username)}</span>
                     </div>
                 `).join('')}
+            </div>
+            <div class="embedded-call-controls-bar">
+                <div class="call-controls-group">
+                    <button class="call-control-button ${this.isMuted ? 'active' : ''}" id="call-mute-btn" title="Микрофон">
+                        <svg viewBox="0 0 24 24" width="20" height="20">
+                            ${this.isMuted ? 
+                                '<path fill="currentColor" d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02.17c0-.06.02-.11.02-.17V5c0-1.66-1.34-3-3-3S9 3.34 9 5v.18l5.98 5.99zM4.27 3L3 4.27l6.01 6.01V11c0 1.66 1.33 3 2.99 3 .22 0 .44-.03.65-.08l1.66 1.66c-.71.33-1.5.52-2.31.52-2.76 0-5.3-2.1-5.3-5.1H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c.91-.13 1.77-.45 2.54-.9L19.73 21 21 19.73 4.27 3z"/>' :
+                                '<path fill="currentColor" d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/>'
+                            }
+                        </svg>
+                    </button>
+                    <button class="call-control-button ${this.isCameraOn ? 'active' : ''}" id="call-camera-btn" title="Камера">
+                        <svg viewBox="0 0 24 24" width="20" height="20">
+                            ${this.isCameraOn ?
+                                '<path fill="currentColor" d="M21 6.5l-4 4V7c0-.55-.45-1-1-1H9.82L21 17.18V6.5zM3.27 2L2 3.27 4.73 6H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.21 0 .39-.08.54-.18L19.73 21 21 19.73 3.27 2z"/>' :
+                                '<path fill="currentColor" d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/>'
+                            }
+                        </svg>
+                    </button>
+                </div>
+                <div class="call-controls-group">
+                    <button class="call-control-button ${this.isScreenSharing ? 'active' : ''}" id="call-screen-btn" title="Демонстрация экрана">
+                        <svg viewBox="0 0 24 24" width="20" height="20">
+                            <path fill="currentColor" d="M20 18c1.1 0 1.99-.9 1.99-2L22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2H0v2h24v-2h-4zM4 6h16v10H4V6z"/>
+                        </svg>
+                    </button>
+                </div>
+                <button class="call-control-button end-call" id="call-end-btn" title="Завершить звонок">
+                    <svg viewBox="0 0 24 24" width="20" height="20">
+                        <path fill="currentColor" d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08c-.18-.17-.29-.42-.29-.7 0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28-.79-.74-1.69-1.36-2.67-1.85-.33-.16-.56-.5-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z"/>
+                    </svg>
+                </button>
             </div>
             <div class="embedded-call-resize-handle" id="call-resize-handle"></div>
         `;
@@ -1645,7 +1753,17 @@ const Voice = {
         // Mute button
         document.getElementById('call-mute-btn')?.addEventListener('click', () => {
             this.toggleMute();
-            document.getElementById('call-mute-btn')?.classList.toggle('active', this.isMuted);
+            this.updateCallUIButtons();
+        });
+
+        // Camera button
+        document.getElementById('call-camera-btn')?.addEventListener('click', () => {
+            this.toggleCamera();
+        });
+
+        // Screen share button
+        document.getElementById('call-screen-btn')?.addEventListener('click', () => {
+            this.toggleScreenShare();
         });
 
         // End call button
@@ -1655,11 +1773,6 @@ const Voice = {
             } else {
                 this.endCall();
             }
-        });
-
-        // Add people button
-        document.getElementById('call-add-people-btn')?.addEventListener('click', () => {
-            this.showAddPeopleModal();
         });
 
         // Fullscreen button
@@ -1680,6 +1793,8 @@ const Voice = {
         let isResizing = false;
         let startY = 0;
         let startHeight = 0;
+        const minHeight = 200; // Minimum height to fit avatars and buttons
+        const maxHeight = window.innerHeight * 0.7;
 
         const onMouseDown = (e) => {
             if (container.classList.contains('fullscreen')) return;
