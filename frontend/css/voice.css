@@ -1516,6 +1516,8 @@
 
 .embedded-call-controls-bar {
     transition: transform 0.3s ease, opacity 0.3s ease;
+    transform: translateY(0);
+    opacity: 1;
 }
 
 .embedded-call-controls-bar.hidden {
@@ -1525,7 +1527,7 @@
 }
 
 .embedded-call-controls-bar.visible {
-    transform: translateY(0);
-    opacity: 1;
-    pointer-events: auto;
+    transform: translateY(0) !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
 }

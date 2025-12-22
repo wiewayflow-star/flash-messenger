@@ -445,20 +445,14 @@ const Voice = {
                 callContainer.classList.remove('has-screen-share');
             }
             
-            // Remove video sender from peer connections (keep audio!)
-            for (const [peerId, peer] of this.peers) {
-                const senders = peer.connection.getSenders();
-                const videoSender = senders.find(s => s.track?.kind === 'video');
-                if (videoSender) {
-                    try {
-                        peer.connection.removeTrack(videoSender);
-                    } catch (e) {
-                        console.error('[Voice] Failed to remove video track:', e);
-                    }
-                }
-            }
-            
             this.updateCallUIButtons();
+            
+            // Notify peer that screen share stopped
+            if (this.currentCall) {
+                WS.send('screen_share_stop', {
+                    dmId: this.currentCall.dmId
+                });
+            }
         } else {
             // Start screen sharing
             try {
@@ -482,45 +476,26 @@ const Voice = {
                     if (callContainer) {
                         callContainer.classList.remove('has-screen-share');
                     }
-                    // Remove video sender
-                    for (const [peerId, peer] of this.peers) {
-                        const senders = peer.connection.getSenders();
-                        const videoSender = senders.find(s => s.track?.kind === 'video');
-                        if (videoSender) {
-                            try {
-                                peer.connection.removeTrack(videoSender);
-                            } catch (e) {}
-                        }
-                    }
                     this.updateCallUIButtons();
+                    
+                    // Notify peer
+                    if (this.currentCall) {
+                        WS.send('screen_share_stop', {
+                            dmId: this.currentCall.dmId
+                        });
+                    }
                 };
                 
                 // Show local preview of screen share
                 this.showScreenSharePreview(this.screenStream);
                 
-                // Add video track to peer connections (don't touch audio!)
-                for (const [peerId, peer] of this.peers) {
-                    try {
-                        // Add screen track as new track
-                        peer.connection.addTrack(screenTrack, this.screenStream);
-                        console.log('[Voice] Added screen track to peer:', peerId);
-                        
-                        // Create new offer for renegotiation
-                        const offer = await peer.connection.createOffer();
-                        await peer.connection.setLocalDescription(offer);
-                        
-                        WS.send('voice_offer', {
-                            channelId: this.currentChannel || null,
-                            targetUserId: peerId,
-                            offer: peer.connection.localDescription
-                        });
-                    } catch (e) {
-                        console.error('[Voice] Failed to add screen track:', e);
-                    }
-                }
-                
                 this.isScreenSharing = true;
                 this.updateCallUIButtons();
+                
+                // For now, just show local preview - full WebRTC screen share needs more work
+                // to avoid breaking audio. This is a simplified version.
+                console.log('[Voice] Screen sharing started (local preview only for now)');
+                
             } catch (e) {
                 console.error('[Voice] Failed to share screen:', e);
                 if (e.name !== 'NotAllowedError') {
@@ -1914,48 +1889,57 @@ const Voice = {
         const controlsBar = document.getElementById('call-controls-bar');
         if (!container || !controlsBar) return;
 
-        let hideTimeout = null;
+        // Store timeout reference on the element
+        container._hideTimeout = null;
         
         const showControls = () => {
             controlsBar.classList.remove('hidden');
             controlsBar.classList.add('visible');
             
             // Clear existing timeout
-            if (hideTimeout) {
-                clearTimeout(hideTimeout);
+            if (container._hideTimeout) {
+                clearTimeout(container._hideTimeout);
+                container._hideTimeout = null;
             }
             
             // Set new timeout to hide after 4 seconds
-            hideTimeout = setTimeout(() => {
-                controlsBar.classList.remove('visible');
-                controlsBar.classList.add('hidden');
+            container._hideTimeout = setTimeout(() => {
+                if (!controlsBar.matches(':hover')) {
+                    controlsBar.classList.remove('visible');
+                    controlsBar.classList.add('hidden');
+                }
             }, 4000);
         };
 
-        // Show controls on mouse enter
+        const hideControls = () => {
+            if (container._hideTimeout) {
+                clearTimeout(container._hideTimeout);
+            }
+            container._hideTimeout = setTimeout(() => {
+                if (!controlsBar.matches(':hover') && !container.matches(':hover')) {
+                    controlsBar.classList.remove('visible');
+                    controlsBar.classList.add('hidden');
+                }
+            }, 4000);
+        };
+
+        // Show controls on any mouse activity in container
         container.addEventListener('mouseenter', showControls);
-        
-        // Show controls on mouse move
         container.addEventListener('mousemove', showControls);
+        container.addEventListener('mouseleave', hideControls);
         
-        // Keep controls visible when hovering over them
+        // Keep controls visible when directly hovering them
         controlsBar.addEventListener('mouseenter', () => {
-            if (hideTimeout) {
-                clearTimeout(hideTimeout);
+            if (container._hideTimeout) {
+                clearTimeout(container._hideTimeout);
+                container._hideTimeout = null;
             }
             controlsBar.classList.remove('hidden');
             controlsBar.classList.add('visible');
         });
-        
-        // Start hide timer when leaving controls
-        controlsBar.addEventListener('mouseleave', () => {
-            hideTimeout = setTimeout(() => {
-                controlsBar.classList.remove('visible');
-                controlsBar.classList.add('hidden');
-            }, 4000);
-        });
 
-        // Initially show controls
+        // Initially show controls (visible by default)
+        controlsBar.classList.add('visible');
         showControls();
     },
 
