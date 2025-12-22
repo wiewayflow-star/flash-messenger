@@ -1450,3 +1450,63 @@
     flex: 1;
     padding-bottom: 0;
 }
+
+
+/* ============ SCREEN SHARE CONTAINER ============ */
+
+.screen-share-container {
+    position: absolute;
+    top: 60px;
+    left: 0;
+    right: 0;
+    bottom: 80px;
+    background: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+}
+
+.screen-share-container video {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.screen-share-label {
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.screen-share-label svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* When screen share is active, hide participants */
+.embedded-call-container.has-screen-share .embedded-call-participants {
+    position: absolute;
+    bottom: 80px;
+    right: 16px;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 8px;
+    z-index: 60;
+}
+
+.embedded-call-container.has-screen-share .embedded-call-avatar {
+    width: 40px;
+    height: 40px;
+    font-size: 16px;
+}

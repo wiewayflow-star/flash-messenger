@@ -434,11 +434,35 @@ const Voice = {
                 this.screenStream = null;
             }
             this.isScreenSharing = false;
+            
+            // Remove screen share video element
+            const screenVideo = document.getElementById('screen-share-video');
+            if (screenVideo) screenVideo.remove();
+            
+            // Remove has-screen-share class
+            const callContainer = document.getElementById('embedded-call');
+            if (callContainer) {
+                callContainer.classList.remove('has-screen-share');
+            }
+            
+            // Remove track from peer connections
+            for (const [peerId, peer] of this.peers) {
+                const senders = peer.connection.getSenders();
+                const videoSender = senders.find(s => s.track?.kind === 'video');
+                if (videoSender) {
+                    peer.connection.removeTrack(videoSender);
+                }
+            }
+            
+            this.updateCallUIButtons();
         } else {
             // Start screen sharing
             try {
                 this.screenStream = await navigator.mediaDevices.getDisplayMedia({ 
-                    video: true,
+                    video: {
+                        cursor: 'always',
+                        displaySurface: 'monitor'
+                    },
                     audio: false 
                 });
                 
@@ -448,15 +472,39 @@ const Voice = {
                 screenTrack.onended = () => {
                     this.isScreenSharing = false;
                     this.screenStream = null;
+                    const screenVideo = document.getElementById('screen-share-video');
+                    if (screenVideo) screenVideo.remove();
+                    const callContainer = document.getElementById('embedded-call');
+                    if (callContainer) {
+                        callContainer.classList.remove('has-screen-share');
+                    }
                     this.updateCallUIButtons();
                 };
                 
+                // Show local preview of screen share
+                this.showScreenSharePreview(this.screenStream);
+                
                 // Add to peer connections
                 for (const [peerId, peer] of this.peers) {
-                    peer.connection.addTrack(screenTrack, this.screenStream);
+                    const sender = peer.connection.addTrack(screenTrack, this.screenStream);
+                    console.log('[Voice] Added screen track to peer:', peerId);
+                    
+                    // Renegotiate connection
+                    try {
+                        const offer = await peer.connection.createOffer();
+                        await peer.connection.setLocalDescription(offer);
+                        WS.send('voice_offer', {
+                            channelId: this.currentChannel || null,
+                            targetUserId: peerId,
+                            offer: peer.connection.localDescription
+                        });
+                    } catch (e) {
+                        console.error('[Voice] Failed to renegotiate:', e);
+                    }
                 }
                 
                 this.isScreenSharing = true;
+                this.updateCallUIButtons();
             } catch (e) {
                 console.error('[Voice] Failed to share screen:', e);
                 if (e.name !== 'NotAllowedError') {
@@ -464,7 +512,37 @@ const Voice = {
                 }
             }
         }
-        this.updateCallUIButtons();
+    },
+
+    // Show screen share preview
+    showScreenSharePreview(stream) {
+        // Remove existing
+        const existing = document.getElementById('screen-share-video');
+        if (existing) existing.remove();
+        
+        const callContainer = document.getElementById('embedded-call');
+        if (!callContainer) return;
+        
+        callContainer.classList.add('has-screen-share');
+        
+        const videoContainer = document.createElement('div');
+        videoContainer.className = 'screen-share-container';
+        videoContainer.id = 'screen-share-video';
+        videoContainer.innerHTML = `
+            <video autoplay muted playsinline></video>
+            <div class="screen-share-label">
+                <svg viewBox="0 0 24 24"><path fill="currentColor" d="M20 18c1.1 0 1.99-.9 1.99-2L22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2H0v2h24v-2h-4zM4 6h16v10H4V6z"/></svg>
+                Ваш экран
+            </div>
+        `;
+        
+        const video = videoContainer.querySelector('video');
+        video.srcObject = stream;
+        
+        const participants = document.getElementById('call-participants');
+        if (participants) {
+            callContainer.insertBefore(videoContainer, participants);
+        }
     },
 
     // Create peer connection for a user
@@ -692,6 +770,19 @@ const Voice = {
 
         peer.stream = stream;
 
+        // Check for video track (screen share)
+        const videoTrack = stream.getVideoTracks()[0];
+        if (videoTrack) {
+            console.log('[Voice] Received video track (screen share) from:', peerId);
+            this.showRemoteScreenShare(peerId, stream);
+            
+            // Handle track ended
+            videoTrack.onended = () => {
+                console.log('[Voice] Remote screen share ended');
+                this.hideRemoteScreenShare();
+            };
+        }
+
         // Create audio element for playback
         let audioElement = peer.audioElement;
         if (!audioElement) {
@@ -728,6 +819,52 @@ const Voice = {
 
         // Setup voice activity detection for remote stream
         this.setupRemoteVoiceActivityDetection(peerId, stream);
+    },
+
+    // Show remote screen share
+    showRemoteScreenShare(peerId, stream) {
+        // Remove existing
+        this.hideRemoteScreenShare();
+        
+        const callContainer = document.getElementById('embedded-call');
+        if (!callContainer) return;
+        
+        callContainer.classList.add('has-screen-share');
+        
+        const videoContainer = document.createElement('div');
+        videoContainer.className = 'screen-share-container';
+        videoContainer.id = 'remote-screen-share';
+        
+        // Get username
+        const peer = this.peers.get(peerId);
+        const username = peer?.username || 'Участник';
+        
+        videoContainer.innerHTML = `
+            <video autoplay playsinline></video>
+            <div class="screen-share-label">
+                <svg viewBox="0 0 24 24"><path fill="currentColor" d="M20 18c1.1 0 1.99-.9 1.99-2L22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2H0v2h24v-2h-4zM4 6h16v10H4V6z"/></svg>
+                Экран ${username}
+            </div>
+        `;
+        
+        const video = videoContainer.querySelector('video');
+        video.srcObject = stream;
+        
+        const participants = document.getElementById('call-participants');
+        if (participants) {
+            callContainer.insertBefore(videoContainer, participants);
+        }
+    },
+
+    // Hide remote screen share
+    hideRemoteScreenShare() {
+        const existing = document.getElementById('remote-screen-share');
+        if (existing) existing.remove();
+        
+        const callContainer = document.getElementById('embedded-call');
+        if (callContainer) {
+            callContainer.classList.remove('has-screen-share');
+        }
     },
 
     // Setup voice activity detection for remote peer
@@ -1690,10 +1827,9 @@ const Voice = {
             <div class="embedded-call-participants" id="call-participants">
                 ${participants.map(p => `
                     <div class="embedded-call-participant ${p.isMe ? 'me' : ''}" data-user-id="${p.id}">
-                        <div class="embedded-call-avatar" style="background: ${Utils.getUserColor(p.id)}">
-                            ${Utils.getInitials(p.username)}
+                        <div class="embedded-call-avatar" style="${p.avatar ? `background-image: url(${p.avatar}); background-size: cover; background-position: center;` : `background: ${Utils.getUserColor(p.id)};`}">
+                            ${p.avatar ? '' : Utils.getInitials(p.username)}
                         </div>
-                        <span class="embedded-call-participant-name">${Utils.escapeHtml(p.username)}</span>
                     </div>
                 `).join('')}
             </div>
