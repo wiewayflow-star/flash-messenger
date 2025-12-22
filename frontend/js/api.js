@@ -171,6 +171,13 @@ const API = {
             });
         },
 
+        async updateStatus(status) {
+            return API.request('/users/me/status', {
+                method: 'POST',
+                body: JSON.stringify({ status })
+            });
+        },
+
         async updatePublicKey(publicKey) {
             return API.request('/users/me/public-key', {
                 method: 'POST',

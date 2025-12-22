@@ -578,6 +578,31 @@ app.patch('/api/users/me', authenticate, async (req, res) => {
     res.json({ user: { id: req.user.id, username: req.user.username, tag: req.user.tag, avatar: req.user.avatar, banner: req.user.banner, bio: req.user.bio, status: req.user.status } });
 });
 
+// Update user status
+app.post('/api/users/me/status', authenticate, async (req, res) => {
+    const { status } = req.body;
+    if (!status || !['online', 'idle', 'dnd', 'offline'].includes(status)) {
+        return res.status(400).json({ error: true, message: 'Неверный статус' });
+    }
+    
+    const oldStatus = req.user.status;
+    req.user.status = status;
+    
+    // Sync with secure database
+    try {
+        await Database.Accounts.update(req.user.id, { status });
+    } catch (e) {
+        // Continue even if DB sync fails
+    }
+    
+    // Broadcast status change to all friends
+    if (status !== oldStatus) {
+        broadcastStatusUpdate(req.user.id, status);
+    }
+    
+    res.json({ success: true, status });
+});
+
 // E2EE Public Key endpoints
 app.post('/api/users/me/public-key', authenticate, async (req, res) => {
     const { publicKey } = req.body;

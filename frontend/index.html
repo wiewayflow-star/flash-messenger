@@ -89,11 +89,49 @@
                 </div>
                 <div class="channel-list" id="channel-list"></div>
                 <div class="user-panel">
-                    <div class="user-info">
+                    <div class="user-info" id="user-info-clickable">
                         <div class="user-avatar" id="user-avatar"></div>
                         <div class="user-details">
                             <span class="username" id="user-name">User</span>
                             <span class="user-tag" id="user-tag">#0000</span>
+                        </div>
+                    </div>
+                    <!-- Mini Profile Popup -->
+                    <div class="user-mini-profile" id="user-mini-profile">
+                        <div class="mini-profile-banner" id="mini-profile-banner"></div>
+                        <div class="mini-profile-header">
+                            <div class="mini-profile-avatar" id="mini-profile-avatar"></div>
+                            <div class="mini-profile-badge" id="mini-profile-status-badge"></div>
+                        </div>
+                        <div class="mini-profile-body">
+                            <div class="mini-profile-name" id="mini-profile-name">Username</div>
+                            <div class="mini-profile-tag" id="mini-profile-tag">#0000</div>
+                            <div class="mini-profile-bio" id="mini-profile-bio"></div>
+                        </div>
+                        <div class="mini-profile-divider"></div>
+                        <div class="mini-profile-actions">
+                            <button class="mini-profile-btn" id="mini-profile-edit-btn">
+                                <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                                Редактировать профиль
+                            </button>
+                            <div class="mini-profile-status-selector">
+                                <div class="status-option" data-status="online">
+                                    <span class="status-dot-option online"></span>
+                                    В сети
+                                </div>
+                                <div class="status-option" data-status="idle">
+                                    <span class="status-dot-option idle"></span>
+                                    Не активен
+                                </div>
+                                <div class="status-option" data-status="dnd">
+                                    <span class="status-dot-option dnd"></span>
+                                    Не беспокоить
+                                </div>
+                                <div class="status-option" data-status="offline">
+                                    <span class="status-dot-option offline"></span>
+                                    Невидимый
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div class="user-controls">

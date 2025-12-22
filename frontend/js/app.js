@@ -319,6 +319,38 @@ const App = {
                 this.sendFriendRequest();
             }
         });
+        // Mini profile popup
+        Utils.$('#user-info-clickable')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.toggleMiniProfile();
+        });
+
+        // Mini profile edit button
+        Utils.$('#mini-profile-edit-btn')?.addEventListener('click', () => {
+            this.hideMiniProfile();
+            this.showModal('settings-modal');
+            this.loadSettings();
+            this.switchSettingsTab('profile');
+        });
+
+        // Status options
+        Utils.$$('.status-option').forEach(option => {
+            option.addEventListener('click', () => {
+                const status = option.dataset.status;
+                this.setUserStatus(status);
+            });
+        });
+
+        // Close mini profile on outside click
+        document.addEventListener('click', (e) => {
+            const miniProfile = Utils.$('#user-mini-profile');
+            const userInfo = Utils.$('#user-info-clickable');
+            if (miniProfile?.classList.contains('show') && 
+                !miniProfile.contains(e.target) && 
+                !userInfo?.contains(e.target)) {
+                this.hideMiniProfile();
+            }
+        });
     },
 
     // UI Updates
@@ -338,6 +370,97 @@ const App = {
         } else {
             avatarEl.style.backgroundImage = '';
             avatarEl.textContent = Utils.getInitials(user.username);
+        }
+    },
+
+    // Mini Profile Functions
+    toggleMiniProfile() {
+        const miniProfile = Utils.$('#user-mini-profile');
+        if (miniProfile.classList.contains('show')) {
+            this.hideMiniProfile();
+        } else {
+            this.showMiniProfile();
+        }
+    },
+
+    showMiniProfile() {
+        const user = Store.state.user;
+        if (!user) return;
+
+        const miniProfile = Utils.$('#user-mini-profile');
+        
+        // Update banner
+        const banner = Utils.$('#mini-profile-banner');
+        if (user.banner) {
+            banner.style.backgroundImage = `url(${user.banner})`;
+            banner.style.backgroundSize = 'cover';
+            banner.style.backgroundPosition = 'center';
+        } else {
+            banner.style.backgroundImage = '';
+            banner.style.background = `linear-gradient(135deg, var(--accent-dark), var(--accent))`;
+        }
+
+        // Update avatar
+        const avatar = Utils.$('#mini-profile-avatar');
+        if (user.avatar) {
+            avatar.style.backgroundImage = `url(${user.avatar})`;
+            avatar.style.backgroundSize = 'cover';
+            avatar.style.backgroundPosition = 'center';
+            avatar.textContent = '';
+        } else {
+            avatar.style.backgroundImage = '';
+            avatar.style.background = Utils.getUserColor(user.id);
+            avatar.textContent = Utils.getInitials(user.username);
+        }
+
+        // Update status badge
+        const statusBadge = Utils.$('#mini-profile-status-badge');
+        const currentStatus = user.status || 'online';
+        statusBadge.className = `mini-profile-badge ${currentStatus}`;
+
+        // Update name and tag
+        Utils.$('#mini-profile-name').textContent = user.username;
+        Utils.$('#mini-profile-tag').textContent = user.tag;
+
+        // Update bio
+        Utils.$('#mini-profile-bio').textContent = user.bio || '';
+
+        // Update active status option
+        Utils.$$('.status-option').forEach(opt => {
+            opt.classList.toggle('active', opt.dataset.status === currentStatus);
+        });
+
+        miniProfile.classList.add('show');
+    },
+
+    hideMiniProfile() {
+        Utils.$('#user-mini-profile')?.classList.remove('show');
+    },
+
+    async setUserStatus(status) {
+        try {
+            await API.users.updateStatus(status);
+            Store.state.user.status = status;
+            
+            // Update status badge in mini profile
+            const statusBadge = Utils.$('#mini-profile-status-badge');
+            statusBadge.className = `mini-profile-badge ${status}`;
+
+            // Update active status option
+            Utils.$$('.status-option').forEach(opt => {
+                opt.classList.toggle('active', opt.dataset.status === status);
+            });
+
+            // Update user avatar status dot
+            const avatarEl = Utils.$('#user-avatar');
+            if (avatarEl) {
+                // Remove old status class and add new one
+                avatarEl.className = `user-avatar status-${status}`;
+            }
+
+            this.hideMiniProfile();
+        } catch (e) {
+            console.error('Failed to update status:', e);
         }
     },
 
