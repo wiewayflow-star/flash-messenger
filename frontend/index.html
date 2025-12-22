@@ -23,34 +23,34 @@
                 </div>
                 
                 <div class="auth-tabs">
-                    <button class="auth-tab active" data-tab="login">Вход</button>
-                    <button class="auth-tab" data-tab="register">Регистрация</button>
+                    <button type="button" class="auth-tab active" data-tab="login">Вход</button>
+                    <button type="button" class="auth-tab" data-tab="register">Регистрация</button>
                 </div>
 
-                <form id="login-form" class="auth-form active">
+                <form id="login-form" class="auth-form active" method="POST" action="javascript:void(0);">
                     <div class="form-group">
                         <label>Email</label>
-                        <input type="email" name="email" required placeholder="your@email.com">
+                        <input type="email" name="email" required placeholder="your@email.com" autocomplete="email">
                     </div>
                     <div class="form-group">
                         <label>Пароль</label>
-                        <input type="password" name="password" required placeholder="••••••••">
+                        <input type="password" name="password" required placeholder="••••••••" autocomplete="current-password">
                     </div>
                     <button type="submit" class="btn btn-primary btn-block">Войти</button>
                 </form>
 
-                <form id="register-form" class="auth-form">
+                <form id="register-form" class="auth-form" method="POST" action="javascript:void(0);">
                     <div class="form-group">
                         <label>Email</label>
-                        <input type="email" name="email" required placeholder="your@email.com">
+                        <input type="email" name="email" required placeholder="your@email.com" autocomplete="email">
                     </div>
                     <div class="form-group">
                         <label>Никнейм</label>
-                        <input type="text" name="username" required placeholder="FlashUser" minlength="2" maxlength="32">
+                        <input type="text" name="username" required placeholder="FlashUser" minlength="2" maxlength="32" autocomplete="username">
                     </div>
                     <div class="form-group">
                         <label>Пароль</label>
-                        <input type="password" name="password" required placeholder="••••••••" minlength="6">
+                        <input type="password" name="password" required placeholder="••••••••" minlength="6" autocomplete="new-password">
                     </div>
                     <button type="submit" class="btn btn-primary btn-block">Создать аккаунт</button>
                 </form>
