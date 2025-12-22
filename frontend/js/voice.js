@@ -866,6 +866,14 @@ const Voice = {
         }
     },
 
+    // Update call UI buttons (for DM calls)
+    updateCallUIButtons() {
+        const muteBtn = document.getElementById('call-mute-btn');
+        if (muteBtn) {
+            muteBtn.classList.toggle('active', this.isMuted);
+        }
+    },
+
     // Update participants list in voice channel
     updateParticipantsList() {
         // This will be called when participants change

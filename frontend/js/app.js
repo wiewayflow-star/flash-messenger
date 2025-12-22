@@ -1683,13 +1683,15 @@ const App = {
         this.isGlobalMuted = !this.isGlobalMuted;
         this.updateMuteButtonUI();
         
-        // Apply to Voice if in a call
-        if (window.Voice && (Voice.currentChannel || Voice.isDMCall)) {
+        // Apply to Voice if in a call (voice channel or DM call)
+        if (window.Voice && (Voice.currentChannel || Voice.currentCall)) {
             Voice.isMuted = this.isGlobalMuted;
             if (Voice.localStream) {
                 Voice.localStream.getAudioTracks().forEach(track => track.enabled = !this.isGlobalMuted);
             }
             Voice.updateVoicePanelUI();
+            // Update call UI buttons too
+            Voice.updateCallUIButtons?.();
             // Notify server
             if (Voice.currentChannel) {
                 WS.send('voice_mute', { channelId: Voice.currentChannel, muted: this.isGlobalMuted });
@@ -1710,8 +1712,8 @@ const App = {
             this.updateMuteButtonUI();
             this.updateDeafenButtonUI();
             
-            // Apply to Voice if in a call
-            if (window.Voice && (Voice.currentChannel || Voice.isDMCall)) {
+            // Apply to Voice if in a call (voice channel or DM call)
+            if (window.Voice && (Voice.currentChannel || Voice.currentCall)) {
                 Voice.isDeafened = true;
                 Voice.isMuted = true;
                 if (Voice.localStream) {
@@ -1724,6 +1726,7 @@ const App = {
                     }
                 }
                 Voice.updateVoicePanelUI();
+                Voice.updateCallUIButtons?.();
                 if (Voice.currentChannel) {
                     WS.send('voice_deafen', { channelId: Voice.currentChannel, deafened: true });
                 }
@@ -1735,8 +1738,8 @@ const App = {
             this.updateMuteButtonUI();
             this.updateDeafenButtonUI();
             
-            // Apply to Voice if in a call
-            if (window.Voice && (Voice.currentChannel || Voice.isDMCall)) {
+            // Apply to Voice if in a call (voice channel or DM call)
+            if (window.Voice && (Voice.currentChannel || Voice.currentCall)) {
                 Voice.isDeafened = false;
                 Voice.isMuted = this.isGlobalMuted;
                 if (Voice.localStream) {
@@ -1749,6 +1752,7 @@ const App = {
                     }
                 }
                 Voice.updateVoicePanelUI();
+                Voice.updateCallUIButtons?.();
                 if (Voice.currentChannel) {
                     WS.send('voice_deafen', { channelId: Voice.currentChannel, deafened: false });
                 }
