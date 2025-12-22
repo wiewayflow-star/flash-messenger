@@ -1246,13 +1246,21 @@ const App = {
         Store.state.currentDM = null;
         
         try {
+            console.log('[Friends] Loading friends and requests...');
             const [friendsData, requestsData] = await Promise.all([
                 API.users.getFriends(),
                 API.friends.getRequests()
             ]);
 
+            console.log('[Friends] friendsData:', friendsData);
+            console.log('[Friends] requestsData:', requestsData);
+
             const { friends } = friendsData;
             const { incoming, outgoing } = requestsData;
+            
+            console.log('[Friends] friends:', friends);
+            console.log('[Friends] incoming:', incoming);
+            console.log('[Friends] outgoing:', outgoing);
 
             let html = '<div class="friends-container">';
 
@@ -1341,7 +1349,16 @@ const App = {
                 </button>
             `;
 
-            Utils.$('#messages-list').innerHTML = html;
+            console.log('[Friends] Setting messages-list HTML, length:', html.length);
+            const messagesList = Utils.$('#messages-list');
+            console.log('[Friends] messages-list element:', messagesList);
+            
+            if (messagesList) {
+                messagesList.innerHTML = html;
+                console.log('[Friends] HTML set successfully');
+            } else {
+                console.error('[Friends] messages-list element not found!');
+            }
             
             // Hide message input (this is not a chat)
             Utils.$('.message-input-container')?.style.setProperty('display', 'none');
