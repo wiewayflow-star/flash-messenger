@@ -1182,6 +1182,9 @@ const Voice = {
 
         this.stopRingtone();
         
+        // Play connect sound
+        if (window.WS) WS.playCallConnectSound();
+        
         const modal = document.getElementById('incoming-call-modal');
         if (modal) modal.remove();
 
@@ -1265,6 +1268,9 @@ const Voice = {
     // Handle call accepted by other party
     handleCallAccepted(payload) {
         console.log('[Voice] Call accepted:', payload);
+        
+        // Play connect sound
+        if (window.WS) WS.playCallConnectSound();
         
         // If we were disconnected and rejoining, restore UI
         if (this.isDisconnected) {
@@ -2031,6 +2037,9 @@ const Voice = {
     endCall(forceClose = false) {
         console.log('[Voice] Ending call, forceClose:', forceClose);
 
+        // Play end call sound
+        if (window.WS) WS.playCallEndSound();
+
         // Clear DM alone timeout if exists
         this.clearDMAloneTimeout();
         
@@ -2288,31 +2297,43 @@ const Voice = {
         this.pendingCall = null;
     },
 
-    // Play ringtone
+    // Play ringtone (pleasant two-tone ring)
     playRingtone() {
         try {
             if (!this.ringtoneContext) {
                 this.ringtoneContext = new (window.AudioContext || window.webkitAudioContext)();
             }
 
-            const playTone = () => {
-                if (!this.pendingCall) return;
+            const playRing = () => {
+                if (!this.pendingCall && !this.pendingGroupCall) return;
                 
-                const osc = this.ringtoneContext.createOscillator();
-                const gain = this.ringtoneContext.createGain();
-                osc.connect(gain);
-                gain.connect(this.ringtoneContext.destination);
+                const ctx = this.ringtoneContext;
+                const now = ctx.currentTime;
                 
-                osc.frequency.value = 440;
-                gain.gain.setValueAtTime(0.2, this.ringtoneContext.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, this.ringtoneContext.currentTime + 0.5);
+                // Pleasant two-tone ring pattern
+                const playTone = (freq, start, dur, vol) => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.frequency.value = freq;
+                    osc.type = 'sine';
+                    gain.gain.setValueAtTime(0, start);
+                    gain.gain.linearRampToValueAtTime(vol, start + 0.02);
+                    gain.gain.exponentialRampToValueAtTime(0.001, start + dur);
+                    osc.start(start);
+                    osc.stop(start + dur);
+                };
                 
-                osc.start(this.ringtoneContext.currentTime);
-                osc.stop(this.ringtoneContext.currentTime + 0.5);
+                // Ring pattern: two quick tones
+                playTone(523.25, now, 0.2, 0.15);        // C5
+                playTone(659.25, now + 0.15, 0.2, 0.15); // E5
+                playTone(523.25, now + 0.4, 0.2, 0.15);  // C5
+                playTone(659.25, now + 0.55, 0.2, 0.15); // E5
             };
 
-            playTone();
-            this.ringtoneInterval = setInterval(playTone, 2000);
+            playRing();
+            this.ringtoneInterval = setInterval(playRing, 1800);
         } catch (e) {
             console.error('[Voice] Failed to play ringtone:', e);
         }

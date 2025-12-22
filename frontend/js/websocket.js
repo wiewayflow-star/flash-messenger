@@ -7,6 +7,7 @@ const WS = {
     maxReconnectAttempts: 5,
     heartbeatInterval: null,
     audioContext: null,
+    ringtoneInterval: null,
 
     connect() {
         if (this.socket?.readyState === WebSocket.OPEN) return;
@@ -534,30 +535,185 @@ const WS = {
         }, 5000);
     },
 
+    // Play pleasant notification sound (Discord-like "pop")
     playNotificationSound() {
         try {
-            // Create audio context if not exists
             if (!this.audioContext) {
                 this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
             }
-
-            // Play notification sound (simple beep)
-            const oscillator = this.audioContext.createOscillator();
-            const gainNode = this.audioContext.createGain();
             
-            oscillator.connect(gainNode);
-            gainNode.connect(this.audioContext.destination);
+            const ctx = this.audioContext;
+            const now = ctx.currentTime;
             
-            oscillator.frequency.value = 800;
-            oscillator.type = 'sine';
+            // Create a pleasant two-tone "pop" sound
+            const playTone = (freq, startTime, duration, volume) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                
+                osc.frequency.value = freq;
+                osc.type = 'sine';
+                
+                // Smooth envelope
+                gain.gain.setValueAtTime(0, startTime);
+                gain.gain.linearRampToValueAtTime(volume, startTime + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+                
+                osc.start(startTime);
+                osc.stop(startTime + duration);
+            };
             
-            gainNode.gain.setValueAtTime(0.3, this.audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.3);
+            // Two pleasant tones (like Discord notification)
+            playTone(880, now, 0.15, 0.15);        // A5
+            playTone(1318.5, now + 0.08, 0.12, 0.12); // E6
             
-            oscillator.start(this.audioContext.currentTime);
-            oscillator.stop(this.audioContext.currentTime + 0.3);
         } catch (e) {
             console.error('Failed to play notification sound:', e);
+        }
+    },
+
+    // Play message send sound (softer)
+    playMessageSentSound() {
+        try {
+            if (!this.audioContext) {
+                this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            
+            const ctx = this.audioContext;
+            const now = ctx.currentTime;
+            
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            
+            osc.frequency.value = 600;
+            osc.type = 'sine';
+            
+            gain.gain.setValueAtTime(0, now);
+            gain.gain.linearRampToValueAtTime(0.08, now + 0.01);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+            
+            osc.start(now);
+            osc.stop(now + 0.1);
+        } catch (e) {
+            // Silent fail
+        }
+    },
+
+    // Play call ringtone
+    playCallRingtone() {
+        if (this.ringtoneInterval) return; // Already playing
+        
+        try {
+            if (!this.audioContext) {
+                this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            
+            const playRing = () => {
+                const ctx = this.audioContext;
+                const now = ctx.currentTime;
+                
+                // Classic phone ring pattern
+                const playTone = (freq, start, dur) => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.frequency.value = freq;
+                    osc.type = 'sine';
+                    gain.gain.setValueAtTime(0.15, start);
+                    gain.gain.setValueAtTime(0, start + dur);
+                    osc.start(start);
+                    osc.stop(start + dur);
+                };
+                
+                // Two-tone ring
+                playTone(440, now, 0.15);
+                playTone(480, now, 0.15);
+                playTone(440, now + 0.2, 0.15);
+                playTone(480, now + 0.2, 0.15);
+            };
+            
+            playRing();
+            this.ringtoneInterval = setInterval(playRing, 1500);
+        } catch (e) {
+            console.error('Failed to play ringtone:', e);
+        }
+    },
+
+    stopCallRingtone() {
+        if (this.ringtoneInterval) {
+            clearInterval(this.ringtoneInterval);
+            this.ringtoneInterval = null;
+        }
+    },
+
+    // Play call connect sound
+    playCallConnectSound() {
+        try {
+            if (!this.audioContext) {
+                this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            
+            const ctx = this.audioContext;
+            const now = ctx.currentTime;
+            
+            // Pleasant ascending tones
+            const playTone = (freq, start, dur, vol) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.frequency.value = freq;
+                osc.type = 'sine';
+                gain.gain.setValueAtTime(0, start);
+                gain.gain.linearRampToValueAtTime(vol, start + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.001, start + dur);
+                osc.start(start);
+                osc.stop(start + dur);
+            };
+            
+            playTone(523.25, now, 0.15, 0.12);       // C5
+            playTone(659.25, now + 0.1, 0.15, 0.12); // E5
+            playTone(783.99, now + 0.2, 0.2, 0.15);  // G5
+        } catch (e) {
+            // Silent fail
+        }
+    },
+
+    // Play call end sound
+    playCallEndSound() {
+        try {
+            if (!this.audioContext) {
+                this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            
+            const ctx = this.audioContext;
+            const now = ctx.currentTime;
+            
+            // Descending tones
+            const playTone = (freq, start, dur, vol) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.frequency.value = freq;
+                osc.type = 'sine';
+                gain.gain.setValueAtTime(0, start);
+                gain.gain.linearRampToValueAtTime(vol, start + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.001, start + dur);
+                osc.start(start);
+                osc.stop(start + dur);
+            };
+            
+            playTone(523.25, now, 0.2, 0.1);        // C5
+            playTone(392, now + 0.15, 0.25, 0.08);  // G4
+        } catch (e) {
+            // Silent fail
         }
     }
 };
