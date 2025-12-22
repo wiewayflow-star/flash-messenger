@@ -83,6 +83,11 @@ const Components = {
 
     // Message (with grouping support)
     message(msg, isGrouped = false) {
+        // Check if this is a call ended system message
+        if (msg.type === 'call_ended') {
+            return this.callEndedMessage(msg);
+        }
+        
         const content = Utils.parseMarkdown(Utils.escapeHtml(msg.content));
         const encryptedIcon = msg.encrypted ? '<svg class="encrypted-icon" viewBox="0 0 24 24" width="12" height="12" title="Зашифровано"><path fill="currentColor" d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>' : '';
         
@@ -184,5 +189,71 @@ const Components = {
                 <p>${description}</p>
             </div>
         `;
+    },
+
+    // Call ended system message (Discord-style)
+    callEndedMessage(msg) {
+        const duration = msg.call_duration || 0;
+        const durationText = this.formatCallDuration(duration);
+        const starterUsername = Utils.escapeHtml(msg.call_starter_username || msg.author?.username || 'Пользователь');
+        const starterId = msg.call_starter_id || msg.author_id || msg.author?.id;
+        const time = Utils.formatTime(msg.created_at);
+        
+        return `
+            <div class="message message-system call-ended-message" data-message="${msg.id}">
+                <div class="call-ended-icon">
+                    <svg viewBox="0 0 24 24" width="20" height="20">
+                        <path fill="currentColor" d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56-.35-.12-.74-.03-1.01.24l-1.57 1.97c-2.83-1.35-5.48-3.9-6.89-6.83l1.95-1.66c.27-.28.35-.67.24-1.02-.37-1.11-.56-2.3-.56-3.53 0-.54-.45-.99-.99-.99H4.19C3.65 3 3 3.24 3 3.99 3 13.28 10.73 21 20.01 21c.71 0 .99-.63.99-1.18v-3.45c0-.54-.45-.99-.99-.99z"/>
+                    </svg>
+                </div>
+                <div class="call-ended-content">
+                    <span class="call-ended-text">
+                        <span class="call-starter-name" data-user-id="${starterId}" onclick="App.showUserProfile('${starterId}')">${starterUsername}</span> начал звонок, который продлился ${durationText}
+                    </span>
+                    <span class="call-ended-timestamp">${time}</span>
+                </div>
+            </div>
+        `;
+    },
+
+    // Format call duration like Discord
+    formatCallDuration(durationMs) {
+        const totalSeconds = Math.floor(durationMs / 1000);
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        
+        // Less than 5 minutes
+        if (totalSeconds < 300) {
+            return 'несколько минут';
+        }
+        
+        // 5-59 minutes - show only minutes
+        if (hours === 0) {
+            return `${minutes} ${this.pluralize(minutes, 'минуту', 'минуты', 'минут')}`;
+        }
+        
+        // 1+ hours - show hours and minutes
+        let result = `${hours} ${this.pluralize(hours, 'час', 'часа', 'часов')}`;
+        if (minutes > 0) {
+            result += ` ${minutes} ${this.pluralize(minutes, 'минуту', 'минуты', 'минут')}`;
+        }
+        return result;
+    },
+
+    // Russian pluralization helper
+    pluralize(n, one, few, many) {
+        const mod10 = n % 10;
+        const mod100 = n % 100;
+        
+        if (mod100 >= 11 && mod100 <= 19) {
+            return many;
+        }
+        if (mod10 === 1) {
+            return one;
+        }
+        if (mod10 >= 2 && mod10 <= 4) {
+            return few;
+        }
+        return many;
     }
 };

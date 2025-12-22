@@ -33,7 +33,8 @@ const DB = {
     friendRequests: new Map(), // { id, from_user_id, to_user_id, status: 'pending'|'accepted'|'rejected', created_at }
     friends: new Map(), // { id, user1_id, user2_id, created_at }
     dmChannels: new Map(), // { id, user1_id, user2_id, created_at }
-    groupCalls: new Map() // { id, name, owner_id, members: [userId], created_at } - Конфы (макс 10 человек)
+    groupCalls: new Map(), // { id, name, owner_id, members: [userId], created_at } - Конфы (макс 10 человек)
+    activeCalls: new Map() // dmId -> { starterId, starterUsername, startTime, participants: Set }
 };
 
 // ============ MIDDLEWARE ============
@@ -1440,6 +1441,16 @@ wss.on('connection', (ws) => {
                         const caller = DB.users.get(userId);
                         console.log(`[DM Call] ${caller?.username} calling ${payload.targetUserId}`);
                         
+                        // Store call info if not already active
+                        if (!DB.activeCalls.has(payload.dmId)) {
+                            DB.activeCalls.set(payload.dmId, {
+                                starterId: userId,
+                                starterUsername: caller?.username,
+                                startTime: null, // Will be set when call is accepted
+                                participants: new Set([userId])
+                            });
+                        }
+                        
                         notifyUser(payload.targetUserId, {
                             type: 'dm_call_incoming',
                             payload: {
@@ -1459,6 +1470,13 @@ wss.on('connection', (ws) => {
                     if (userId && payload.dmId && payload.callerId) {
                         console.log(`[DM Call] ${userId} accepted call from ${payload.callerId}`);
                         
+                        // Set call start time when accepted
+                        const activeCall = DB.activeCalls.get(payload.dmId);
+                        if (activeCall) {
+                            activeCall.startTime = Date.now();
+                            activeCall.participants.add(userId);
+                        }
+                        
                         notifyUser(payload.callerId, {
                             type: 'dm_call_accepted',
                             payload: {
@@ -1472,6 +1490,9 @@ wss.on('connection', (ws) => {
                 case 'dm_call_reject':
                     if (userId && payload.dmId && payload.callerId) {
                         console.log(`[DM Call] ${userId} rejected call from ${payload.callerId}`);
+                        
+                        // Remove call from active calls (call was never connected)
+                        DB.activeCalls.delete(payload.dmId);
                         
                         notifyUser(payload.callerId, {
                             type: 'dm_call_rejected',
@@ -1489,6 +1510,58 @@ wss.on('connection', (ws) => {
                         if (dm) {
                             const otherUserId = dm.user1_id === userId ? dm.user2_id : dm.user1_id;
                             console.log(`[DM Call] ${userId} ended call with ${otherUserId}`);
+                            
+                            // Check if call was active and create system message
+                            const activeCall = DB.activeCalls.get(payload.dmId);
+                            if (activeCall) {
+                                // Remove user from participants
+                                activeCall.participants.delete(userId);
+                                
+                                // If no participants left, end the call and create system message
+                                if (activeCall.participants.size === 0 && activeCall.startTime) {
+                                    const duration = Date.now() - activeCall.startTime;
+                                    const starter = DB.users.get(activeCall.starterId);
+                                    
+                                    // Create system message about call
+                                    const messageId = uuidv4();
+                                    const systemMessage = {
+                                        id: messageId,
+                                        dm_id: payload.dmId,
+                                        author_id: activeCall.starterId,
+                                        content: '',
+                                        type: 'call_ended',
+                                        call_duration: duration,
+                                        call_starter_id: activeCall.starterId,
+                                        call_starter_username: activeCall.starterUsername || starter?.username,
+                                        reactions: [],
+                                        created_at: new Date().toISOString()
+                                    };
+                                    DB.messages.set(messageId, systemMessage);
+                                    
+                                    const responseMessage = {
+                                        ...systemMessage,
+                                        author: starter ? { 
+                                            id: starter.id, 
+                                            username: starter.username, 
+                                            tag: starter.tag, 
+                                            avatar: starter.avatar 
+                                        } : null
+                                    };
+                                    
+                                    // Notify both users about the system message
+                                    notifyUser(dm.user1_id, {
+                                        type: 'dm_message',
+                                        payload: { dmId: payload.dmId, message: responseMessage }
+                                    });
+                                    notifyUser(dm.user2_id, {
+                                        type: 'dm_message',
+                                        payload: { dmId: payload.dmId, message: responseMessage }
+                                    });
+                                    
+                                    // Remove call from active calls
+                                    DB.activeCalls.delete(payload.dmId);
+                                }
+                            }
                             
                             notifyUser(otherUserId, {
                                 type: 'dm_call_ended',
@@ -1511,6 +1584,9 @@ wss.on('connection', (ws) => {
                                 targetUserId = dm.user1_id === userId ? dm.user2_id : dm.user1_id;
                             }
                         }
+                        
+                        // Remove call from active calls (call was never connected)
+                        DB.activeCalls.delete(payload.dmId);
                         
                         if (targetUserId) {
                             console.log(`[DM Call] ${userId} cancelled call to ${targetUserId}`);

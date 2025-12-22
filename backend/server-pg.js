@@ -116,6 +116,18 @@ async function initDB() {
                 created_at TIMESTAMP DEFAULT NOW()
             );
             
+            CREATE TABLE IF NOT EXISTS dm_messages (
+                id UUID PRIMARY KEY,
+                dm_id UUID REFERENCES dm_channels(id) ON DELETE CASCADE,
+                author_id UUID REFERENCES users(id),
+                content TEXT,
+                type VARCHAR(50) DEFAULT 'text',
+                call_duration BIGINT,
+                call_starter_id UUID,
+                call_starter_username VARCHAR(100),
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+            
             CREATE TABLE IF NOT EXISTS invites (
                 code VARCHAR(20) PRIMARY KEY,
                 server_id UUID REFERENCES servers(id) ON DELETE CASCADE,
@@ -167,6 +179,7 @@ async function generateUniqueTag() {
 // WebSocket connections
 const wsConnections = new Map();
 const channelSubscriptions = new Map();
+const activeCalls = new Map(); // dmId -> { starterId, starterUsername, startTime, participants: Set }
 
 wss.on('connection', (ws) => {
     const connectionId = uuidv4();
@@ -680,18 +693,35 @@ app.get('/api/dm/:dmId/messages', authenticate, async (req, res) => {
             return res.status(403).json({ error: true, message: 'Нет доступа' });
         }
         
-        const result = await pool.query(`
-            SELECT m.*, u.username, u.tag, u.avatar FROM messages m
-            JOIN users u ON m.author_id = u.id WHERE m.dm_id = $1 ORDER BY m.created_at ASC LIMIT 100
+        // Get regular messages
+        const regularResult = await pool.query(`
+            SELECT m.*, u.username, u.tag, u.avatar, 'text' as type FROM messages m
+            JOIN users u ON m.author_id = u.id WHERE m.dm_id = $1
         `, [req.params.dmId]);
         
-        const messages = result.rows.map(m => ({
-            id: m.id, dm_id: m.dm_id, content: m.content, created_at: m.created_at,
-            author: { id: m.author_id, username: m.username, tag: m.tag, avatar: m.avatar }
-        }));
+        // Get system messages (call ended, etc.)
+        const systemResult = await pool.query(`
+            SELECT dm.*, u.username, u.tag, u.avatar FROM dm_messages dm
+            LEFT JOIN users u ON dm.author_id = u.id WHERE dm.dm_id = $1
+        `, [req.params.dmId]);
         
-        res.json({ messages });
+        // Combine and sort
+        const allMessages = [
+            ...regularResult.rows.map(m => ({
+                id: m.id, dm_id: m.dm_id, content: m.content, created_at: m.created_at, type: m.type || 'text',
+                author: { id: m.author_id, username: m.username, tag: m.tag, avatar: m.avatar }
+            })),
+            ...systemResult.rows.map(m => ({
+                id: m.id, dm_id: m.dm_id, content: m.content, created_at: m.created_at,
+                type: m.type, call_duration: m.call_duration ? Number(m.call_duration) : null,
+                call_starter_id: m.call_starter_id, call_starter_username: m.call_starter_username,
+                author: m.author_id ? { id: m.author_id, username: m.username, tag: m.tag, avatar: m.avatar } : null
+            }))
+        ].sort((a, b) => new Date(a.created_at) - new Date(b.created_at)).slice(-100);
+        
+        res.json({ messages: allMessages });
     } catch (e) {
+        console.error('Error getting DM messages:', e);
         res.status(500).json({ error: true, message: 'Ошибка сервера' });
     }
 });
@@ -929,21 +959,43 @@ wss.on('connection', (ws) => {
                 case 'dm_call_start':
                     if (userId && payload.dmId && payload.targetUserId) {
                         const userResult = await pool.query('SELECT username, avatar FROM users WHERE id = $1', [userId]);
+                        const caller = userResult.rows[0];
+                        
+                        // Store call info if not already active
+                        if (!activeCalls.has(payload.dmId)) {
+                            activeCalls.set(payload.dmId, {
+                                starterId: userId,
+                                starterUsername: caller?.username,
+                                startTime: null,
+                                participants: new Set([userId])
+                            });
+                        }
+                        
                         notifyUser(payload.targetUserId, {
                             type: 'dm_call_incoming',
-                            payload: { dmId: payload.dmId, callerId: userId, caller: { id: userId, username: userResult.rows[0]?.username, avatar: userResult.rows[0]?.avatar } }
+                            payload: { dmId: payload.dmId, callerId: userId, caller: { id: userId, username: caller?.username, avatar: caller?.avatar } }
                         });
                     }
                     break;
 
                 case 'dm_call_accept':
                     if (userId && payload.dmId && payload.callerId) {
+                        // Set call start time when accepted
+                        const activeCall = activeCalls.get(payload.dmId);
+                        if (activeCall) {
+                            activeCall.startTime = Date.now();
+                            activeCall.participants.add(userId);
+                        }
+                        
                         notifyUser(payload.callerId, { type: 'dm_call_accepted', payload: { dmId: payload.dmId, userId } });
                     }
                     break;
 
                 case 'dm_call_reject':
                     if (userId && payload.dmId && payload.callerId) {
+                        // Remove call from active calls
+                        activeCalls.delete(payload.dmId);
+                        
                         notifyUser(payload.callerId, { type: 'dm_call_rejected', payload: { dmId: payload.dmId, userId } });
                     }
                     break;
@@ -954,6 +1006,49 @@ wss.on('connection', (ws) => {
                         if (dmResult.rows[0]) {
                             const dm = dmResult.rows[0];
                             const otherUserId = dm.user1_id === userId ? dm.user2_id : dm.user1_id;
+                            
+                            // Check if call was active and create system message
+                            const activeCall = activeCalls.get(payload.dmId);
+                            if (activeCall) {
+                                activeCall.participants.delete(userId);
+                                
+                                // If no participants left, end the call and create system message
+                                if (activeCall.participants.size === 0 && activeCall.startTime) {
+                                    const duration = Date.now() - activeCall.startTime;
+                                    
+                                    // Get starter info
+                                    const starterResult = await pool.query('SELECT id, username, tag, avatar FROM users WHERE id = $1', [activeCall.starterId]);
+                                    const starter = starterResult.rows[0];
+                                    
+                                    // Create system message about call
+                                    const messageId = uuidv4();
+                                    await pool.query(
+                                        `INSERT INTO dm_messages (id, dm_id, author_id, content, type, call_duration, call_starter_id, call_starter_username, created_at)
+                                         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())`,
+                                        [messageId, payload.dmId, activeCall.starterId, '', 'call_ended', duration, activeCall.starterId, activeCall.starterUsername || starter?.username]
+                                    );
+                                    
+                                    const responseMessage = {
+                                        id: messageId,
+                                        dm_id: payload.dmId,
+                                        author_id: activeCall.starterId,
+                                        content: '',
+                                        type: 'call_ended',
+                                        call_duration: duration,
+                                        call_starter_id: activeCall.starterId,
+                                        call_starter_username: activeCall.starterUsername || starter?.username,
+                                        created_at: new Date().toISOString(),
+                                        author: starter ? { id: starter.id, username: starter.username, tag: starter.tag, avatar: starter.avatar } : null
+                                    };
+                                    
+                                    // Notify both users about the system message
+                                    notifyUser(dm.user1_id, { type: 'dm_message', payload: { dmId: payload.dmId, message: responseMessage } });
+                                    notifyUser(dm.user2_id, { type: 'dm_message', payload: { dmId: payload.dmId, message: responseMessage } });
+                                    
+                                    activeCalls.delete(payload.dmId);
+                                }
+                            }
+                            
                             notifyUser(otherUserId, { type: 'dm_call_ended', payload: { dmId: payload.dmId, userId } });
                         }
                     }
@@ -969,6 +1064,10 @@ wss.on('connection', (ws) => {
                                 targetUserId = dm.user1_id === userId ? dm.user2_id : dm.user1_id;
                             }
                         }
+                        
+                        // Remove call from active calls
+                        activeCalls.delete(payload.dmId);
+                        
                         if (targetUserId) notifyUser(targetUserId, { type: 'dm_call_cancelled', payload: { dmId: payload.dmId, callerId: userId } });
                     }
                     break;
