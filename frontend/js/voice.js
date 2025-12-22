@@ -525,6 +525,8 @@ const Voice = {
 
     // Create separate peer connection for screen share
     async createScreenSharePeer(peerId, screenTrack) {
+        console.log('[Screen] Creating screen share peer for:', peerId);
+        
         const config = {
             iceServers: CONFIG.ICE_SERVERS || [
                 { urls: 'stun:stun.l.google.com:19302' },
@@ -536,10 +538,12 @@ const Voice = {
         
         // Add screen track
         connection.addTrack(screenTrack, this.screenStream);
+        console.log('[Screen] Added screen track to peer connection');
 
         // Handle ICE candidates
         connection.onicecandidate = (event) => {
             if (event.candidate) {
+                console.log('[Screen] Sending ICE candidate to:', peerId);
                 WS.send('screen_ice_candidate', {
                     targetUserId: peerId,
                     candidate: event.candidate
@@ -547,24 +551,38 @@ const Voice = {
             }
         };
 
-        this.screenPeers.set(peerId, { connection });
+        // Handle connection state
+        connection.onconnectionstatechange = () => {
+            console.log('[Screen] Connection state:', connection.connectionState);
+        };
+
+        connection.oniceconnectionstatechange = () => {
+            console.log('[Screen] ICE state:', connection.iceConnectionState);
+        };
+
+        this.screenPeers.set(peerId, { 
+            connection,
+            iceCandidateBuffer: [],
+            remoteDescriptionSet: false
+        });
 
         // Create and send offer
         try {
             const offer = await connection.createOffer();
             await connection.setLocalDescription(offer);
+            console.log('[Screen] Sending screen share offer to:', peerId);
             WS.send('screen_share_offer', {
                 targetUserId: peerId,
                 offer: connection.localDescription
             });
         } catch (e) {
-            console.error('[Voice] Failed to create screen share offer:', e);
+            console.error('[Screen] Failed to create screen share offer:', e);
         }
     },
 
     // Handle incoming screen share offer
     async handleScreenShareOffer(fromUserId, offer) {
-        console.log('[Voice] Received screen share offer from:', fromUserId);
+        console.log('[Screen] Received screen share offer from:', fromUserId);
         
         const config = {
             iceServers: CONFIG.ICE_SERVERS || [
@@ -577,9 +595,11 @@ const Voice = {
         
         // Handle incoming video track
         connection.ontrack = (event) => {
-            console.log('[Voice] Received screen share track');
+            console.log('[Screen] *** Received screen share track! ***');
+            console.log('[Screen] Track kind:', event.track.kind);
             const stream = event.streams[0];
             if (stream) {
+                console.log('[Screen] Stream has', stream.getTracks().length, 'tracks');
                 this.showRemoteScreenShare(fromUserId, stream);
             }
         };
@@ -587,6 +607,7 @@ const Voice = {
         // Handle ICE candidates
         connection.onicecandidate = (event) => {
             if (event.candidate) {
+                console.log('[Screen] Sending ICE candidate to:', fromUserId);
                 WS.send('screen_ice_candidate', {
                     targetUserId: fromUserId,
                     candidate: event.candidate
@@ -594,50 +615,105 @@ const Voice = {
             }
         };
 
+        // Handle connection state
+        connection.onconnectionstatechange = () => {
+            console.log('[Screen] Connection state:', connection.connectionState);
+        };
+
+        connection.oniceconnectionstatechange = () => {
+            console.log('[Screen] ICE state:', connection.iceConnectionState);
+        };
+
         if (!this.screenPeers) this.screenPeers = new Map();
-        this.screenPeers.set(fromUserId, { connection });
+        this.screenPeers.set(fromUserId, { 
+            connection,
+            iceCandidateBuffer: [],
+            remoteDescriptionSet: false
+        });
 
         try {
             await connection.setRemoteDescription(new RTCSessionDescription(offer));
+            
+            // Mark remote description as set
+            const peer = this.screenPeers.get(fromUserId);
+            peer.remoteDescriptionSet = true;
+            
+            // Process buffered ICE candidates
+            if (peer.iceCandidateBuffer && peer.iceCandidateBuffer.length > 0) {
+                console.log('[Screen] Processing', peer.iceCandidateBuffer.length, 'buffered ICE candidates');
+                for (const candidate of peer.iceCandidateBuffer) {
+                    await connection.addIceCandidate(new RTCIceCandidate(candidate));
+                }
+                peer.iceCandidateBuffer = [];
+            }
+            
             const answer = await connection.createAnswer();
             await connection.setLocalDescription(answer);
+            console.log('[Screen] Sending screen share answer to:', fromUserId);
             WS.send('screen_share_answer', {
                 targetUserId: fromUserId,
                 answer: connection.localDescription
             });
         } catch (e) {
-            console.error('[Voice] Failed to handle screen share offer:', e);
+            console.error('[Screen] Failed to handle screen share offer:', e);
         }
     },
 
     // Handle screen share answer
     async handleScreenShareAnswer(fromUserId, answer) {
+        console.log('[Screen] Received screen share answer from:', fromUserId);
         const screenPeer = this.screenPeers?.get(fromUserId);
-        if (!screenPeer) return;
+        if (!screenPeer) {
+            console.error('[Screen] No screen peer found for:', fromUserId);
+            return;
+        }
 
         try {
             await screenPeer.connection.setRemoteDescription(new RTCSessionDescription(answer));
-            console.log('[Voice] Screen share connection established with:', fromUserId);
+            screenPeer.remoteDescriptionSet = true;
+            
+            // Process buffered ICE candidates
+            if (screenPeer.iceCandidateBuffer && screenPeer.iceCandidateBuffer.length > 0) {
+                console.log('[Screen] Processing', screenPeer.iceCandidateBuffer.length, 'buffered ICE candidates');
+                for (const candidate of screenPeer.iceCandidateBuffer) {
+                    await screenPeer.connection.addIceCandidate(new RTCIceCandidate(candidate));
+                }
+                screenPeer.iceCandidateBuffer = [];
+            }
+            
+            console.log('[Screen] Screen share connection established with:', fromUserId);
         } catch (e) {
-            console.error('[Voice] Failed to set screen share answer:', e);
+            console.error('[Screen] Failed to set screen share answer:', e);
         }
     },
 
     // Handle screen share ICE candidate
     async handleScreenIceCandidate(fromUserId, candidate) {
+        console.log('[Screen] Received ICE candidate from:', fromUserId);
         const screenPeer = this.screenPeers?.get(fromUserId);
-        if (!screenPeer) return;
+        if (!screenPeer) {
+            console.error('[Screen] No screen peer found for ICE candidate:', fromUserId);
+            return;
+        }
+
+        // Buffer if remote description not set yet
+        if (!screenPeer.remoteDescriptionSet) {
+            console.log('[Screen] Buffering ICE candidate');
+            screenPeer.iceCandidateBuffer = screenPeer.iceCandidateBuffer || [];
+            screenPeer.iceCandidateBuffer.push(candidate);
+            return;
+        }
 
         try {
             await screenPeer.connection.addIceCandidate(new RTCIceCandidate(candidate));
         } catch (e) {
-            console.error('[Voice] Failed to add screen ICE candidate:', e);
+            console.error('[Screen] Failed to add screen ICE candidate:', e);
         }
     },
 
     // Handle screen share stop
     handleScreenShareStop(fromUserId) {
-        console.log('[Voice] Screen share stopped by:', fromUserId);
+        console.log('[Screen] Screen share stopped by:', fromUserId);
         this.hideRemoteScreenShare();
         
         const screenPeer = this.screenPeers?.get(fromUserId);
