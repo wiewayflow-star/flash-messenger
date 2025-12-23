@@ -1050,62 +1050,28 @@ const App = {
         }
     },
 
-    // Home view
+    // Home view - renders DM sidebar (Discord style)
     async showHome() {
         Utils.$$('.server-icon').forEach(i => i.classList.remove('active'));
         Utils.$('.home-icon').classList.add('active');
-        Utils.$('#server-name').textContent = 'Flash';
-        
-        // Update titlebar
-        this.updateTitlebar('Друзья');
+        Utils.$('#server-name').textContent = 'Личные сообщения';
         
         Store.setCurrentServer(null);
         Store.setCurrentChannel(null);
-        Store.setMessages([]);
-        this.renderMessages();
         
-        // Hide chat area when no chat is open
-        Utils.$('.main-content')?.classList.add('no-chat');
+        // Render DM sidebar
+        await this.renderDMSidebar();
         
-        // Load friends for DM list
+        // If no DM is open, show friends view
+        if (!Store.state.currentDM) {
+            this.showFriendsView();
+        }
+    },
+
+    // Render DM sidebar (always visible when home is selected)
+    async renderDMSidebar() {
         try {
             const { friends } = await API.users.getFriends();
-            
-            let dmListHtml = '';
-            if (friends.length > 0) {
-                dmListHtml = `
-                    <div class="dm-section">
-                        <div class="dm-section-title">Личные сообщения</div>
-                        ${friends.map(friend => {
-                            const avatarStyle = friend.avatar 
-                                ? `background-image: url(${friend.avatar}); background-size: cover; background-position: center;`
-                                : `background: ${Utils.getUserColor(friend.id)}`;
-                            const avatarContent = friend.avatar ? '' : Utils.getInitials(friend.username);
-                            const unreadCount = Store.getUnreadDM(friend.id);
-                            const unreadBadge = unreadCount > 0 
-                                ? `<span class="dm-unread-badge">${unreadCount > 99 ? '99+' : unreadCount}</span>` 
-                                : '';
-                            return `
-                            <div class="dm-item" data-user="${friend.id}">
-                                <div class="dm-avatar" style="${avatarStyle}">
-                                    ${avatarContent}
-                                    <span class="status-dot ${friend.status || 'offline'}"></span>
-                                </div>
-                                <div class="dm-info">
-                                    <div class="dm-name">${Utils.escapeHtml(friend.username)}${unreadBadge}</div>
-                                    <div class="dm-status">${this.getStatusText(friend.status)}</div>
-                                </div>
-                            </div>
-                        `}).join('')}
-                    </div>
-                `;
-            } else {
-                dmListHtml = `
-                    <p style="color: var(--text-muted); text-align: center; padding: 20px; font-size: 13px;">
-                        Добавьте друзей, чтобы начать общение
-                    </p>
-                `;
-            }
             
             // Get friend requests count for badge
             let friendRequestsBadge = '';
@@ -1116,28 +1082,106 @@ const App = {
                 }
             } catch (e) {}
             
+            // Check if friends view is active
+            const isFriendsActive = !Store.state.currentDM;
+            
+            let dmListHtml = '';
+            if (friends.length > 0) {
+                dmListHtml = friends.map(friend => {
+                    const avatarStyle = friend.avatar 
+                        ? `background-image: url(${friend.avatar}); background-size: cover; background-position: center;`
+                        : `background: ${Utils.getUserColor(friend.id)}`;
+                    const avatarContent = friend.avatar ? '' : Utils.getInitials(friend.username);
+                    const unreadCount = Store.getUnreadDM(friend.id);
+                    const unreadBadge = unreadCount > 0 
+                        ? `<span class="dm-unread-badge">${unreadCount > 99 ? '99+' : unreadCount}</span>` 
+                        : '';
+                    const isActive = Store.state.currentDMUser?.id === friend.id;
+                    return `
+                    <div class="dm-item ${isActive ? 'active' : ''}" data-user="${friend.id}">
+                        <div class="dm-avatar" style="${avatarStyle}">
+                            ${avatarContent}
+                            <span class="status-dot ${friend.status || 'offline'}"></span>
+                        </div>
+                        <div class="dm-info">
+                            <div class="dm-name">${Utils.escapeHtml(friend.username)}${unreadBadge}</div>
+                        </div>
+                    </div>
+                `}).join('');
+            }
+            
             Utils.$('#channel-list').innerHTML = `
-                <button class="btn btn-primary" style="width: 100%; margin-bottom: 8px;" onclick="App.showHome()">
-                    Обновить
-                </button>
-                <button class="btn btn-secondary" style="width: 100%; margin-bottom: 16px; position: relative;" onclick="App.showFriends()">
-                    Друзья${friendRequestsBadge}
-                </button>
+                <div class="dm-search-btn" id="dm-search-btn">
+                    <span>Найти или начать беседу</span>
+                </div>
+                <div class="dm-nav-item ${isFriendsActive ? 'active' : ''}" id="friends-nav-btn">
+                    <svg viewBox="0 0 24 24" width="24" height="24">
+                        <path fill="currentColor" d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+                    </svg>
+                    <span>Друзья</span>
+                    ${friendRequestsBadge}
+                </div>
+                <div class="dm-section-header">
+                    <span>Личные сообщения</span>
+                </div>
                 <div class="dm-list">${dmListHtml}</div>
             `;
+            
+            // Bind events
+            Utils.$('#dm-search-btn')?.addEventListener('click', () => this.openSearchModal());
+            Utils.$('#friends-nav-btn')?.addEventListener('click', () => this.showFriendsView());
+            
         } catch (error) {
-            console.error('Failed to load friends:', error);
+            console.error('Failed to load DM sidebar:', error);
             Utils.$('#channel-list').innerHTML = `
-                <button class="btn btn-secondary" style="width: 100%; margin-bottom: 16px;" onclick="App.showFriends()">
-                    Друзья
-                </button>
+                <div class="dm-search-btn" id="dm-search-btn">
+                    <span>Найти или начать беседу</span>
+                </div>
+                <div class="dm-nav-item active" id="friends-nav-btn">
+                    <svg viewBox="0 0 24 24" width="24" height="24">
+                        <path fill="currentColor" d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+                    </svg>
+                    <span>Друзья</span>
+                </div>
+                <div class="dm-section-header">
+                    <span>Личные сообщения</span>
+                </div>
                 <div class="dm-list">
-                    <p style="color: var(--text-muted); text-align: center; padding: 20px;">
+                    <p style="color: var(--text-muted); text-align: center; padding: 20px; font-size: 13px;">
                         Ошибка загрузки
                     </p>
                 </div>
             `;
+            Utils.$('#dm-search-btn')?.addEventListener('click', () => this.openSearchModal());
+            Utils.$('#friends-nav-btn')?.addEventListener('click', () => this.showFriendsView());
         }
+    },
+
+    // Show friends view in main content area
+    showFriendsView() {
+        // Update titlebar
+        this.updateTitlebar('Друзья');
+        
+        // Clear current DM
+        Store.state.currentDM = null;
+        Store.state.currentDMUser = null;
+        
+        // Update sidebar to highlight friends button
+        Utils.$$('.dm-nav-item').forEach(el => el.classList.remove('active'));
+        Utils.$('#friends-nav-btn')?.classList.add('active');
+        Utils.$$('.dm-item').forEach(el => el.classList.remove('active'));
+        
+        // Show main content
+        Utils.$('.main-content')?.classList.remove('no-chat');
+        
+        // Show friends in main area
+        this.showFriends();
+    },
+
+    // Open search modal
+    openSearchModal() {
+        this.showModal('search-modal');
+        Utils.$('#user-search-input')?.focus();
     },
 
     // User Profile
@@ -1650,8 +1694,8 @@ const App = {
             Store.clearUnreadDM(otherUser.id);
             this.updateDMUnreadBadge(otherUser.id);
             
-            // Update UI - show "Flash" in sidebar, username in chat header
-            Utils.$('#server-name').textContent = 'Flash';
+            // Update UI
+            Utils.$('#server-name').textContent = 'Личные сообщения';
             Utils.$('#current-channel-name').textContent = `@${otherUser.username}`;
             Utils.$('#channel-hash').style.display = 'none'; // Hide # for DMs
             
@@ -1668,6 +1712,12 @@ const App = {
             Store.state.currentDMUser = otherUser;
             Store.setCurrentServer(null);
             Store.setCurrentChannel(null);
+            
+            // Update sidebar to highlight this DM
+            Utils.$$('.dm-nav-item').forEach(el => el.classList.remove('active'));
+            Utils.$$('.dm-item').forEach(el => {
+                el.classList.toggle('active', el.dataset.user === otherUser.id);
+            });
             
             // Show chat area
             Utils.$('.main-content')?.classList.remove('no-chat');
