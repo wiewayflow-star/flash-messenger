@@ -85,7 +85,70 @@ const App = {
         
         this.statusUpdateInterval = setInterval(() => {
             this.refreshFriendsStatus();
+            // Also refresh DM sidebar if on home
+            if (!Store.state.currentServer) {
+                this.refreshDMSidebar();
+            }
         }, 4000);
+    },
+
+    // Refresh DM sidebar without losing state
+    async refreshDMSidebar() {
+        try {
+            const { friends } = await API.users.getFriends();
+            
+            // Update existing DM items or add new ones
+            const dmList = Utils.$('.dm-list');
+            if (!dmList) return;
+            
+            // Get friend requests count for badge
+            let friendRequestsBadge = '';
+            try {
+                const { incoming } = await API.friends.getRequests();
+                if (incoming && incoming.length > 0) {
+                    friendRequestsBadge = `<span class="friend-requests-badge">${incoming.length > 99 ? '99+' : incoming.length}</span>`;
+                }
+            } catch (e) {}
+            
+            // Update badge on friends button
+            const friendsBtn = Utils.$('#friends-nav-btn');
+            if (friendsBtn) {
+                const existingBadge = friendsBtn.querySelector('.friend-requests-badge');
+                if (existingBadge) existingBadge.remove();
+                if (friendRequestsBadge) {
+                    friendsBtn.insertAdjacentHTML('beforeend', friendRequestsBadge);
+                }
+            }
+            
+            // Update DM list
+            if (friends.length > 0) {
+                const currentDMUserId = Store.state.currentDMUser?.id;
+                
+                dmList.innerHTML = friends.map(friend => {
+                    const avatarStyle = friend.avatar 
+                        ? `background-image: url(${friend.avatar}); background-size: cover; background-position: center;`
+                        : `background: ${Utils.getUserColor(friend.id)}`;
+                    const avatarContent = friend.avatar ? '' : Utils.getInitials(friend.username);
+                    const unreadCount = Store.getUnreadDM(friend.id);
+                    const unreadBadge = unreadCount > 0 
+                        ? `<span class="dm-unread-badge">${unreadCount > 99 ? '99+' : unreadCount}</span>` 
+                        : '';
+                    const isActive = currentDMUserId === friend.id;
+                    return `
+                    <div class="dm-item ${isActive ? 'active' : ''}" data-user="${friend.id}">
+                        <div class="dm-avatar" style="${avatarStyle}">
+                            ${avatarContent}
+                            <span class="status-dot ${friend.status || 'offline'}"></span>
+                        </div>
+                        <div class="dm-info">
+                            <div class="dm-name">${Utils.escapeHtml(friend.username)}${unreadBadge}</div>
+                        </div>
+                    </div>
+                `}).join('');
+            }
+        } catch (e) {
+            // Silently fail
+        }
     },
 
     // Refresh friends status from server
@@ -158,8 +221,13 @@ const App = {
             if (icon) this.selectServer(icon.dataset.server);
         });
 
-        // Home icon
-        Utils.$('.home-icon').addEventListener('click', () => this.showHome());
+        // Home icon - just show friends view, don't reload sidebar
+        Utils.$('.home-icon').addEventListener('click', () => {
+            // Only switch to home if not already there
+            if (Store.state.currentServer) {
+                this.showHome();
+            }
+        });
 
         // Add server
         Utils.$('.add-server').addEventListener('click', () => this.showModal('create-server-modal'));
