@@ -762,6 +762,8 @@ const App = {
 
     // Restore chat structure if friends view was shown
     restoreChatStructure() {
+        // Show header when leaving friends view
+        Utils.$('.content-header')?.classList.remove('friends-view-header');
         const mc = Utils.$('#messages-container');
         if (!mc) return;
         // Check if messages-list exists, if not - restore it
@@ -1254,6 +1256,8 @@ const App = {
         Utils.$('#friends-nav-btn')?.classList.add('active');
         Utils.$$('.dm-item').forEach(el => el.classList.remove('active'));
         Utils.$('.main-content')?.classList.remove('no-chat');
+        // Hide header for friends view
+        Utils.$('.content-header')?.classList.add('friends-view-header');
         this.friendsViewActive = true;
         this.renderFriendsView();
         this.startFriendsRefresh();

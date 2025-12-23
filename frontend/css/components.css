@@ -2644,3 +2644,9 @@
     color: var(--text-muted);
     letter-spacing: 0.02em;
 }
+
+
+/* Hide header in friends view */
+.content-header.friends-view-header {
+    display: none;
+}
