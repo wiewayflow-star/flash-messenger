@@ -607,6 +607,7 @@ const App = {
     },
 
     async selectServer(serverId) {
+        this.stopFriendsRefresh();
         const server = Store.state.servers.find(s => s.id === serverId);
         if (!server) return;
 
@@ -1226,6 +1227,9 @@ const App = {
     },
 
     // Show friends view in main content area
+    friendsViewActive: false,
+    friendsRefreshInterval: null,
+
     showFriendsView() {
         this.updateTitlebar('Друзья');
         Store.state.currentDM = null;
@@ -1234,7 +1238,25 @@ const App = {
         Utils.$('#friends-nav-btn')?.classList.add('active');
         Utils.$$('.dm-item').forEach(el => el.classList.remove('active'));
         Utils.$('.main-content')?.classList.remove('no-chat');
+        this.friendsViewActive = true;
         this.renderFriendsView();
+        this.startFriendsRefresh();
+    },
+
+    stopFriendsRefresh() {
+        this.friendsViewActive = false;
+        if (this.friendsRefreshInterval) {
+            clearInterval(this.friendsRefreshInterval);
+            this.friendsRefreshInterval = null;
+        }
+    },
+
+    startFriendsRefresh() {
+        if (this.friendsRefreshInterval) clearInterval(this.friendsRefreshInterval);
+        this.friendsViewActive = true;
+        this.friendsRefreshInterval = setInterval(() => {
+            if (this.friendsViewActive) this.renderFriendsView();
+        }, 3000);
     },
 
     friendsFilter: 'online',
@@ -1784,6 +1806,7 @@ const App = {
 
     // DM Chat
     async openDM(userId) {
+        this.stopFriendsRefresh();
         try {
             // Create or get existing DM channel
             const { dmChannel } = await API.dm.create(userId);
