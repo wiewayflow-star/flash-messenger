@@ -66,14 +66,19 @@ const Auth = {
     },
 
     async checkAuth() {
+        console.log('[Auth] checkAuth called, token:', Store.state.token ? 'exists' : 'none');
+        
         // First try token-based auth (faster)
         if (Store.state.token) {
             try {
+                console.log('[Auth] Trying token auth...');
                 const { user } = await API.auth.me();
+                console.log('[Auth] Token auth success:', user.username);
                 Store.setUser(user, Store.state.token);
                 this.onAuthSuccess();
                 return;
             } catch (error) {
+                console.log('[Auth] Token auth failed:', error.message);
                 Store.clearUser();
             }
         }

@@ -292,6 +292,12 @@ app.post('/api/auth/login', async (req, res) => {
     }
 });
 
+// Get current user by token
+app.get('/api/auth/me', authenticate, (req, res) => {
+    const { password, ...user } = req.user;
+    res.json({ user });
+});
+
 app.post('/api/auth/change-password', authenticate, async (req, res) => {
     try {
         const { currentPassword, newPassword } = req.body;
