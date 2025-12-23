@@ -20,6 +20,61 @@ const App = {
         
         // Load global mute/deafen state
         this.loadGlobalAudioState();
+        
+        // Init titlebar for Electron
+        this.initTitlebar();
+    },
+
+    // Initialize custom titlebar for Electron
+    initTitlebar() {
+        if (typeof window.electronAPI === 'undefined') return;
+        
+        const minimizeBtn = document.getElementById('titlebar-minimize');
+        const maximizeBtn = document.getElementById('titlebar-maximize');
+        const closeBtn = document.getElementById('titlebar-close');
+        
+        if (minimizeBtn) minimizeBtn.addEventListener('click', () => window.electronAPI.minimizeWindow());
+        if (maximizeBtn) maximizeBtn.addEventListener('click', () => window.electronAPI.maximizeWindow());
+        if (closeBtn) closeBtn.addEventListener('click', () => window.electronAPI.closeWindow());
+        
+        // Listen for maximize state changes
+        if (window.electronAPI.onMaximizeChange) {
+            window.electronAPI.onMaximizeChange((isMaximized) => {
+                this.updateMaximizeIcon(isMaximized);
+            });
+        }
+    },
+
+    // Update maximize button icon
+    updateMaximizeIcon(isMaximized) {
+        const btn = document.getElementById('titlebar-maximize');
+        if (!btn) return;
+        
+        if (isMaximized) {
+            btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12"><path fill="none" stroke="currentColor" d="M3.5 8.5v-5h5M1.5 10.5v-5h5v5z"/></svg>';
+            btn.title = 'Восстановить';
+        } else {
+            btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12"><rect fill="none" stroke="currentColor" width="9" height="9" x="1.5" y="1.5"/></svg>';
+            btn.title = 'Развернуть';
+        }
+    },
+
+    // Update titlebar title and icon
+    updateTitlebar(title, iconUrl = null) {
+        if (typeof window.electronAPI === 'undefined') return;
+        
+        const titleEl = document.getElementById('titlebar-title');
+        const iconEl = document.getElementById('titlebar-icon');
+        
+        if (titleEl) titleEl.textContent = title;
+        
+        if (iconEl) {
+            if (iconUrl) {
+                iconEl.innerHTML = `<img src="${iconUrl}" alt="">`;
+            } else {
+                iconEl.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M13 3L4 14h7l-2 7 9-11h-7l2-7z"/></svg>';
+            }
+        }
     },
 
     // Start periodic status updates every 4 seconds
@@ -491,6 +546,9 @@ const App = {
         this.renderServers();
         
         Utils.$('#server-name').textContent = server.name;
+        
+        // Update titlebar with server name and icon
+        this.updateTitlebar(server.name, server.icon || null);
 
         // Load channels
         try {
@@ -997,6 +1055,9 @@ const App = {
         Utils.$$('.server-icon').forEach(i => i.classList.remove('active'));
         Utils.$('.home-icon').classList.add('active');
         Utils.$('#server-name').textContent = 'Flash';
+        
+        // Update titlebar
+        this.updateTitlebar('Друзья');
         
         Store.setCurrentServer(null);
         Store.setCurrentChannel(null);
@@ -1593,6 +1654,9 @@ const App = {
             Utils.$('#server-name').textContent = 'Flash';
             Utils.$('#current-channel-name').textContent = `@${otherUser.username}`;
             Utils.$('#channel-hash').style.display = 'none'; // Hide # for DMs
+            
+            // Update titlebar
+            this.updateTitlebar('Личные сообщения');
             
             // Unsubscribe from previous channel
             if (Store.state.currentChannel) {

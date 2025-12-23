@@ -11,6 +11,29 @@
     <link rel="stylesheet" href="css/voice.css">
 </head>
 <body>
+    <!-- Custom Titlebar for Electron -->
+    <div id="electron-titlebar" class="electron-titlebar">
+        <div class="titlebar-drag-region">
+            <div class="titlebar-icon" id="titlebar-icon">
+                <svg viewBox="0 0 24 24" width="16" height="16">
+                    <path fill="currentColor" d="M13 3L4 14h7l-2 7 9-11h-7l2-7z"/>
+                </svg>
+            </div>
+            <span class="titlebar-title" id="titlebar-title">Flash</span>
+        </div>
+        <div class="titlebar-controls">
+            <button class="titlebar-btn" id="titlebar-minimize" title="Свернуть">
+                <svg width="12" height="12" viewBox="0 0 12 12"><rect fill="currentColor" width="10" height="1" x="1" y="6"/></svg>
+            </button>
+            <button class="titlebar-btn" id="titlebar-maximize" title="Развернуть">
+                <svg width="12" height="12" viewBox="0 0 12 12"><rect fill="none" stroke="currentColor" width="9" height="9" x="1.5" y="1.5"/></svg>
+            </button>
+            <button class="titlebar-btn titlebar-close" id="titlebar-close" title="Закрыть">
+                <svg width="12" height="12" viewBox="0 0 12 12"><path fill="currentColor" d="M6.707 6l3.146-3.146a.5.5 0 00-.707-.708L6 5.293 2.854 2.146a.5.5 0 10-.708.708L5.293 6l-3.147 3.146a.5.5 0 00.708.708L6 6.707l3.146 3.147a.5.5 0 00.708-.708L6.707 6z"/></svg>
+            </button>
+        </div>
+    </div>
+
     <div id="app">
         <!-- Auth Screen -->
         <div id="auth-screen" class="screen active">
