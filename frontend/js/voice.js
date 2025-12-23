@@ -463,13 +463,34 @@ const Voice = {
         } else {
             // Start screen sharing
             try {
-                this.screenStream = await navigator.mediaDevices.getDisplayMedia({ 
-                    video: {
-                        cursor: 'always',
-                        displaySurface: 'monitor'
-                    },
-                    audio: false 
-                });
+                // Check if running in Electron
+                if (window.electronAPI?.isDesktop) {
+                    // Use Electron's desktopCapturer
+                    const sources = await window.electronAPI.getScreenSources();
+                    if (!sources || sources.length === 0) {
+                        throw new Error('No screen sources available');
+                    }
+                    // Use first screen source
+                    const source = sources[0];
+                    this.screenStream = await navigator.mediaDevices.getUserMedia({
+                        audio: false,
+                        video: {
+                            mandatory: {
+                                chromeMediaSource: 'desktop',
+                                chromeMediaSourceId: source.id
+                            }
+                        }
+                    });
+                } else {
+                    // Browser - use standard getDisplayMedia
+                    this.screenStream = await navigator.mediaDevices.getDisplayMedia({ 
+                        video: {
+                            cursor: 'always',
+                            displaySurface: 'monitor'
+                        },
+                        audio: false 
+                    });
+                }
                 
                 const screenTrack = this.screenStream.getVideoTracks()[0];
                 
@@ -1735,6 +1756,11 @@ const Voice = {
                 // Normal accept - setup call UI
                 this.showCallUI(this.pendingCall.caller);
                 this.currentCall = { dmId: this.pendingCall.dmId, targetUser: this.pendingCall.caller };
+                
+                // Auto-open DM chat with caller
+                if (window.App && this.pendingCall.caller?.id) {
+                    App.openDM(this.pendingCall.caller.id);
+                }
             }
             
             // Create peer connection - acceptor waits for offer from caller
