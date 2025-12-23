@@ -721,6 +721,9 @@ const App = {
         const channel = Store.state.channels.find(c => c.id === channelId);
         if (!channel) return;
 
+        // Stop friends view refresh
+        this.stopFriendsRefresh();
+
         // Exit DM mode
         this.isDMMode = false;
         Store.state.currentDM = null;
@@ -757,8 +760,21 @@ const App = {
         }
     },
 
+    // Restore chat structure if friends view was shown
+    restoreChatStructure() {
+        const mc = Utils.$('#messages-container');
+        if (!mc) return;
+        // Check if messages-list exists, if not - restore it
+        if (!Utils.$('#messages-list')) {
+            mc.innerHTML = '<div class="messages-list" id="messages-list"></div>';
+        }
+    },
+
     // Messages
     async renderMessages() {
+        // Restore chat structure first
+        this.restoreChatStructure();
+        
         const container = Utils.$('#messages-list');
         const messages = Store.state.messages;
         
