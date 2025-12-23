@@ -1240,10 +1240,8 @@ const App = {
         Utils.$$('.dm-item').forEach(el => el.classList.remove('active'));
         
         // Show main content
-        Utils.$('.main-content')?.classList.remove('no-chat');
-        
-        // Show friends in main area
-        this.showFriends();
+        // Hide main content area (no chat selected)
+        Utils.$('.main-content')?.classList.add('no-chat');
     },
 
     // Open search modal
