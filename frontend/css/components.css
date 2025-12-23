@@ -2315,3 +2315,332 @@
 .dm-item.active .dm-name {
     color: var(--text-primary);
 }
+
+/* ============ FRIENDS VIEW (Discord-style) ============ */
+
+.friends-view {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: var(--bg-primary);
+}
+
+.friends-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--bg-primary);
+}
+
+.friends-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.friends-icon {
+    color: var(--text-muted);
+}
+
+.friends-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-right: 8px;
+}
+
+.friends-tabs {
+    display: flex;
+    gap: 4px;
+}
+
+.friends-tab {
+    padding: 6px 12px;
+    border-radius: 4px;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.friends-tab:hover {
+    background: rgba(79, 84, 92, 0.4);
+    color: var(--text-primary);
+}
+
+.friends-tab.active {
+    background: rgba(79, 84, 92, 0.6);
+    color: var(--text-primary);
+}
+
+.friends-tab .pending-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    margin-left: 4px;
+    background: var(--danger);
+    color: white;
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: 8px;
+}
+
+.friends-add-btn {
+    padding: 8px 16px;
+    background: var(--success);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.friends-add-btn:hover {
+    background: #3ba55c;
+}
+
+.friends-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 16px 20px 8px;
+    padding: 8px 12px;
+    background: var(--bg-tertiary);
+    border-radius: 4px;
+}
+
+.friends-search svg {
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+
+.friends-search input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--text-primary);
+    font-size: 14px;
+    outline: none;
+}
+
+.friends-search input::placeholder {
+    color: var(--text-muted);
+}
+
+.friends-count {
+    padding: 8px 20px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    letter-spacing: 0.02em;
+}
+
+.friends-list-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 12px 12px;
+}
+
+.friends-list-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.friends-list-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.friends-list-content::-webkit-scrollbar-thumb {
+    background: var(--bg-tertiary);
+    border-radius: 4px;
+}
+
+.friends-list-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(79, 84, 92, 0.8);
+}
+
+.friend-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 8px;
+    margin: 0 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    border-top: 1px solid transparent;
+}
+
+.friend-row:not(:first-child) {
+    border-top-color: rgba(79, 84, 92, 0.3);
+}
+
+.friend-row:hover {
+    background: rgba(79, 84, 92, 0.3);
+    border-top-color: transparent;
+}
+
+.friend-row:hover + .friend-row {
+    border-top-color: transparent;
+}
+
+.friend-row-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.friend-row-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 600;
+    color: white;
+    position: relative;
+    flex-shrink: 0;
+}
+
+.friend-row-avatar .status-indicator {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 3px solid var(--bg-primary);
+    background: var(--text-muted);
+}
+
+.friend-row:hover .friend-row-avatar .status-indicator {
+    border-color: rgba(79, 84, 92, 0.3);
+}
+
+.friend-row-avatar .status-indicator.online {
+    background: var(--success);
+}
+
+.friend-row-avatar .status-indicator.idle {
+    background: var(--warning);
+}
+
+.friend-row-avatar .status-indicator.dnd {
+    background: var(--danger);
+}
+
+.friend-row-avatar .status-indicator.offline {
+    background: var(--text-muted);
+}
+
+.friend-row-info {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.friend-row-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.friend-row-status {
+    font-size: 13px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.friend-row-actions {
+    display: flex;
+    gap: 8px;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+.friend-row:hover .friend-row-actions {
+    opacity: 1;
+}
+
+.friend-action-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--bg-tertiary);
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+}
+
+.friend-action-btn:hover {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.friend-action-btn.accept {
+    color: var(--success);
+}
+
+.friend-action-btn.accept:hover {
+    background: var(--success);
+    color: white;
+}
+
+.friend-action-btn.decline {
+    color: var(--danger);
+}
+
+.friend-action-btn.decline:hover {
+    background: var(--danger);
+    color: white;
+}
+
+.friends-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    color: var(--text-muted);
+    font-size: 14px;
+    text-align: center;
+}
+
+.friends-error {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    color: var(--danger);
+    font-size: 14px;
+}
+
+.pending-section-title {
+    padding: 16px 16px 8px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    letter-spacing: 0.02em;
+}

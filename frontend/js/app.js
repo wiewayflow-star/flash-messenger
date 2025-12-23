@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Flash Main Application
  */
 const App = {
@@ -1227,22 +1227,59 @@ const App = {
 
     // Show friends view in main content area
     showFriendsView() {
-        // Update titlebar
         this.updateTitlebar('Друзья');
-        
-        // Clear current DM
         Store.state.currentDM = null;
         Store.state.currentDMUser = null;
-        
-        // Update sidebar to highlight friends button
         Utils.$$('.dm-nav-item').forEach(el => el.classList.remove('active'));
         Utils.$('#friends-nav-btn')?.classList.add('active');
         Utils.$$('.dm-item').forEach(el => el.classList.remove('active'));
-        
-        // Show main content
-        // Hide main content area (no chat selected)
-        Utils.$('.main-content')?.classList.add('no-chat');
+        Utils.$('.main-content')?.classList.remove('no-chat');
+        this.renderFriendsView();
     },
+
+    friendsFilter: 'online',
+    friendsSearchQuery: '',
+
+    async renderFriendsView() {
+        const mc = Utils.$('#messages-container');
+        if (!mc) return;
+        Utils.$('.message-input-container')?.style.setProperty('display', 'none');
+        Utils.$('#channel-hash').style.display = 'none';
+        Utils.$('#current-channel-name').textContent = '';
+        try {
+            const { friends } = await API.users.getFriends();
+            const { incoming, outgoing } = await API.friends.getRequests();
+            let filtered = this.friendsFilter === 'online' ? friends.filter(f => f.status === 'online' || f.status === 'idle' || f.status === 'dnd') : friends;
+            if (this.friendsSearchQuery) filtered = filtered.filter(f => f.username.toLowerCase().includes(this.friendsSearchQuery.toLowerCase()));
+            const onlineCount = friends.filter(f => f.status === 'online' || f.status === 'idle' || f.status === 'dnd').length;
+            const pendingCount = incoming.length + outgoing.length;
+            mc.innerHTML = '<div class="friends-view"><div class="friends-header"><div class="friends-header-left"><svg class="friends-icon" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg><span class="friends-title">Друзья</span><div class="friends-tabs"><button class="friends-tab ' + (this.friendsFilter === 'online' ? 'active' : '') + '" data-filter="online">В сети</button><button class="friends-tab ' + (this.friendsFilter === 'all' ? 'active' : '') + '" data-filter="all">Все</button><button class="friends-tab ' + (this.friendsFilter === 'pending' ? 'active' : '') + '" data-filter="pending">Ожидание' + (pendingCount > 0 ? ' <span class="pending-badge">' + pendingCount + '</span>' : '') + '</button></div></div><button class="friends-add-btn" id="friends-add-btn">Добавить в друзья</button></div><div class="friends-search"><svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg><input type="text" placeholder="Поиск" id="friends-search-input" value="' + this.friendsSearchQuery + '"></div><div class="friends-count">' + (this.friendsFilter === 'online' ? 'В сети' : this.friendsFilter === 'pending' ? 'Ожидание' : 'Все друзья') + '  ' + (this.friendsFilter === 'pending' ? pendingCount : (this.friendsFilter === 'online' ? onlineCount : friends.length)) + '</div><div class="friends-list-content">' + (this.friendsFilter === 'pending' ? this.renderPendingRequests(incoming, outgoing) : this.renderFriendsList(filtered)) + '</div></div>';
+            this.bindFriendsViewEvents();
+        } catch (e) { mc.innerHTML = '<div class="friends-view"><div class="friends-error">Ошибка загрузки</div></div>'; }
+    },
+
+    renderFriendsList(friends) {
+        if (!friends.length) return '<div class="friends-empty">Нет друзей' + (this.friendsFilter === 'online' ? ' в сети' : '') + '</div>';
+        return friends.map(f => '<div class="friend-row" data-user-id="' + f.id + '"><div class="friend-row-left"><div class="friend-row-avatar" style="' + (f.avatar ? 'background-image:url(' + f.avatar + ');background-size:cover' : 'background:' + Utils.getUserColor(f.id)) + '">' + (f.avatar ? '' : Utils.getInitials(f.username)) + '<span class="status-indicator ' + (f.status || 'offline') + '"></span></div><div class="friend-row-info"><div class="friend-row-name">' + Utils.escapeHtml(f.username) + '</div><div class="friend-row-status">' + this.getStatusText(f.status) + '</div></div></div><div class="friend-row-actions"><button class="friend-action-btn" data-action="chat" title="Написать"><svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/></svg></button><button class="friend-action-btn" data-action="more" title="Ещё"><svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg></button></div></div>').join('');
+    },
+
+    renderPendingRequests(inc, out) {
+        if (!inc.length && !out.length) return '<div class="friends-empty">Нет ожидающих запросов</div>';
+        let h = '';
+        if (inc.length) { h += '<div class="pending-section-title">Входящие  ' + inc.length + '</div>'; h += inc.map(r => '<div class="friend-row" data-user-id="' + r.id + '"><div class="friend-row-left"><div class="friend-row-avatar" style="' + (r.avatar ? 'background-image:url(' + r.avatar + ');background-size:cover' : 'background:' + Utils.getUserColor(r.id)) + '">' + (r.avatar ? '' : Utils.getInitials(r.username)) + '</div><div class="friend-row-info"><div class="friend-row-name">' + Utils.escapeHtml(r.username) + '</div><div class="friend-row-status">Входящий запрос</div></div></div><div class="friend-row-actions"><button class="friend-action-btn accept" data-action="accept" title="Принять"><svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></button><button class="friend-action-btn decline" data-action="decline" title="Отклонить"><svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button></div></div>').join(''); }
+        if (out.length) { h += '<div class="pending-section-title">Исходящие  ' + out.length + '</div>'; h += out.map(r => '<div class="friend-row" data-user-id="' + r.id + '"><div class="friend-row-left"><div class="friend-row-avatar" style="' + (r.avatar ? 'background-image:url(' + r.avatar + ');background-size:cover' : 'background:' + Utils.getUserColor(r.id)) + '">' + (r.avatar ? '' : Utils.getInitials(r.username)) + '</div><div class="friend-row-info"><div class="friend-row-name">' + Utils.escapeHtml(r.username) + '</div><div class="friend-row-status">Исходящий запрос</div></div></div><div class="friend-row-actions"><button class="friend-action-btn decline" data-action="cancel" title="Отменить"><svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button></div></div>').join(''); }
+        return h;
+    },
+
+    bindFriendsViewEvents() {
+        Utils.$$('.friends-tab').forEach(t => t.addEventListener('click', () => { this.friendsFilter = t.dataset.filter; this.renderFriendsView(); }));
+        Utils.$('#friends-search-input')?.addEventListener('input', Utils.debounce(e => { this.friendsSearchQuery = e.target.value; this.renderFriendsView(); }, 300));
+        Utils.$('#friends-add-btn')?.addEventListener('click', () => { this.showModal('search-modal'); Utils.$('#user-search-input')?.focus(); });
+        Utils.$$('.friend-row').forEach(r => r.addEventListener('click', e => { const a = e.target.closest('.friend-action-btn')?.dataset.action, id = r.dataset.userId; if (a === 'chat') this.openDM(id); else if (a === 'accept') this.acceptFriendRequest(id); else if (a === 'decline' || a === 'cancel') this.declineFriendRequest(id); else if (!a) this.openDM(id); }));
+    },
+
+    async acceptFriendRequest(id) { try { await API.friends.accept(id); this.renderFriendsView(); this.refreshDMSidebar(); } catch(e) {} },
+    async declineFriendRequest(id) { try { await API.friends.decline(id); this.renderFriendsView(); } catch(e) {} },
 
     // Open search modal
     openSearchModal() {
