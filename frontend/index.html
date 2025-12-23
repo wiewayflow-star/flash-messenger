@@ -271,6 +271,7 @@
                 <div class="settings-sidebar">
                     <button class="settings-tab active" data-section="account">Аккаунт</button>
                     <button class="settings-tab" data-section="security">Безопасность</button>
+                    <button class="settings-tab" data-section="audio">Аудио</button>
                     <button class="settings-tab" data-section="appearance">Внешний вид</button>
                     <button class="settings-tab" data-section="flash-mode">Flash Mode</button>
                     <div class="settings-divider"></div>
@@ -340,6 +341,62 @@
                             <button type="submit" class="btn btn-primary">Изменить пароль</button>
                             <p id="password-message" style="margin-top: 10px; font-size: 13px;"></p>
                         </form>
+                    </div>
+                    <div class="settings-section" data-section="audio">
+                        <h3>Аудио</h3>
+                        <div class="audio-settings">
+                            <div class="form-group">
+                                <label>Устройство ввода (микрофон)</label>
+                                <select id="settings-audio-input" class="form-select">
+                                    <option value="">Загрузка...</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Громкость микрофона</label>
+                                <div class="volume-slider-container">
+                                    <input type="range" id="settings-mic-volume" min="0" max="200" value="100" class="volume-slider">
+                                    <span id="settings-mic-volume-value">100%</span>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Проверка микрофона</label>
+                                <div class="mic-test-container">
+                                    <button class="btn btn-secondary" id="settings-mic-test-btn">Проверить микрофон</button>
+                                    <div class="mic-meter" id="settings-mic-meter">
+                                        <div class="mic-meter-fill" id="settings-mic-meter-fill"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="settings-divider"></div>
+                            <div class="form-group">
+                                <label>Устройство вывода (наушники/колонки)</label>
+                                <select id="settings-audio-output" class="form-select">
+                                    <option value="">Загрузка...</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Громкость вывода</label>
+                                <div class="volume-slider-container">
+                                    <input type="range" id="settings-output-volume" min="0" max="100" value="100" class="volume-slider">
+                                    <span id="settings-output-volume-value">100%</span>
+                                </div>
+                            </div>
+                            <div class="settings-divider"></div>
+                            <h4>Обработка голоса</h4>
+                            <div class="setting-item">
+                                <label>Шумоподавление</label>
+                                <input type="checkbox" id="settings-noise-suppression" checked>
+                            </div>
+                            <div class="setting-item">
+                                <label>Эхоподавление</label>
+                                <input type="checkbox" id="settings-echo-cancellation" checked>
+                            </div>
+                            <div class="setting-item">
+                                <label>Автоматическая регулировка громкости</label>
+                                <input type="checkbox" id="settings-auto-gain" checked>
+                            </div>
+                            <button class="btn btn-primary" id="settings-audio-save">Сохранить настройки</button>
+                        </div>
                     </div>
                     <div class="settings-section" data-section="appearance">
                         <h3>Внешний вид</h3>

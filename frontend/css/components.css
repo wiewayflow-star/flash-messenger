@@ -2650,3 +2650,121 @@
 .content-header.friends-view-header {
     display: none;
 }
+
+
+/* ============ AUDIO SETTINGS ============ */
+
+.audio-settings {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.audio-settings h4 {
+    margin: 8px 0 4px;
+    font-size: 14px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.volume-slider-container {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.volume-slider {
+    flex: 1;
+    height: 6px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: var(--bg-tertiary);
+    border-radius: 3px;
+    outline: none;
+}
+
+.volume-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    background: var(--primary);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: transform 0.15s ease;
+}
+
+.volume-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+}
+
+.volume-slider::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    background: var(--primary);
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+}
+
+.volume-slider-container span {
+    min-width: 45px;
+    text-align: right;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.mic-test-container {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.mic-meter {
+    flex: 1;
+    height: 8px;
+    background: var(--bg-tertiary);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.mic-meter-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--success), var(--warning), var(--danger));
+    border-radius: 4px;
+    transition: width 0.05s ease;
+}
+
+.form-select {
+    width: 100%;
+    padding: 10px 12px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    color: var(--text-primary);
+    font-size: 14px;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.15s ease;
+}
+
+.form-select:hover {
+    border-color: var(--text-muted);
+}
+
+.form-select:focus {
+    border-color: var(--primary);
+}
+
+.form-select option {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.audio-settings .settings-divider {
+    height: 1px;
+    background: var(--border-color);
+    margin: 8px 0;
+}

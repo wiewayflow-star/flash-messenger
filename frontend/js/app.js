@@ -1046,8 +1046,169 @@ const App = {
     },
 
     switchSettingsTab(section) {
-        Utils.$$('.settings-tab').forEach(t => t.classList.toggle('active', t.dataset.section === section));
-        Utils.$$('.settings-section').forEach(s => s.classList.toggle('active', s.dataset.section === section));
+        Utils.$('.settings-tab').forEach(t => t.classList.toggle('active', t.dataset.section === section));
+        Utils.$('.settings-section').forEach(s => s.classList.toggle('active', s.dataset.section === section));
+        
+        // Load audio devices when switching to audio tab
+        if (section === 'audio') {
+            this.loadAudioSettings();
+        }
+    },
+
+    // Audio settings
+    audioTestStream: null,
+    audioAnalyser: null,
+    audioMeterInterval: null,
+
+    async loadAudioSettings() {
+        try {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const audioInputs = devices.filter(d => d.kind === 'audioinput');
+            const audioOutputs = devices.filter(d => d.kind === 'audiooutput');
+            
+            const savedSettings = Utils.storage.get('flash_audio_settings') || {};
+            
+            const inputSelect = Utils.$('#settings-audio-input');
+            if (inputSelect) {
+                inputSelect.innerHTML = audioInputs.map(d => 
+                    `<option value="${d.deviceId}" ${d.deviceId === savedSettings.inputDevice ? 'selected' : ''}>${d.label || 'Микрофон ' + (audioInputs.indexOf(d) + 1)}</option>`
+                ).join('');
+            }
+            
+            const outputSelect = Utils.$('#settings-audio-output');
+            if (outputSelect) {
+                outputSelect.innerHTML = audioOutputs.map(d => 
+                    `<option value="${d.deviceId}" ${d.deviceId === savedSettings.outputDevice ? 'selected' : ''}>${d.label || 'Динамик ' + (audioOutputs.indexOf(d) + 1)}</option>`
+                ).join('');
+            }
+            
+            Utils.$('#settings-mic-volume').value = savedSettings.micVolume ?? 100;
+            Utils.$('#settings-mic-volume-value').textContent = (savedSettings.micVolume ?? 100) + '%';
+            Utils.$('#settings-output-volume').value = savedSettings.outputVolume ?? 100;
+            Utils.$('#settings-output-volume-value').textContent = (savedSettings.outputVolume ?? 100) + '%';
+            
+            Utils.$('#settings-noise-suppression').checked = savedSettings.noiseSuppression ?? true;
+            Utils.$('#settings-echo-cancellation').checked = savedSettings.echoCancellation ?? true;
+            Utils.$('#settings-auto-gain').checked = savedSettings.autoGain ?? true;
+            
+            this.bindAudioSettingsEvents();
+        } catch (e) {
+            console.error('Failed to load audio devices:', e);
+        }
+    },
+
+    bindAudioSettingsEvents() {
+        Utils.$('#settings-mic-volume')?.addEventListener('input', (e) => {
+            Utils.$('#settings-mic-volume-value').textContent = e.target.value + '%';
+        });
+        
+        Utils.$('#settings-output-volume')?.addEventListener('input', (e) => {
+            Utils.$('#settings-output-volume-value').textContent = e.target.value + '%';
+        });
+        
+        const testBtn = Utils.$('#settings-mic-test-btn');
+        if (testBtn && !testBtn.dataset.bound) {
+            testBtn.dataset.bound = 'true';
+            testBtn.addEventListener('click', () => this.toggleMicTest());
+        }
+        
+        const saveBtn = Utils.$('#settings-audio-save');
+        if (saveBtn && !saveBtn.dataset.bound) {
+            saveBtn.dataset.bound = 'true';
+            saveBtn.addEventListener('click', () => this.saveAudioSettings());
+        }
+    },
+
+    async toggleMicTest() {
+        const btn = Utils.$('#settings-mic-test-btn');
+        const meterFill = Utils.$('#settings-mic-meter-fill');
+        
+        if (this.audioTestStream) {
+            this.audioTestStream.getTracks().forEach(t => t.stop());
+            this.audioTestStream = null;
+            if (this.audioMeterInterval) {
+                clearInterval(this.audioMeterInterval);
+                this.audioMeterInterval = null;
+            }
+            btn.textContent = 'Проверить микрофон';
+            btn.classList.remove('btn-danger');
+            btn.classList.add('btn-secondary');
+            meterFill.style.width = '0%';
+            return;
+        }
+        
+        try {
+            const deviceId = Utils.$('#settings-audio-input')?.value;
+            this.audioTestStream = await navigator.mediaDevices.getUserMedia({
+                audio: {
+                    deviceId: deviceId ? { exact: deviceId } : undefined,
+                    noiseSuppression: Utils.$('#settings-noise-suppression')?.checked ?? true,
+                    echoCancellation: Utils.$('#settings-echo-cancellation')?.checked ?? true,
+                    autoGainControl: Utils.$('#settings-auto-gain')?.checked ?? true
+                }
+            });
+            
+            btn.textContent = 'Остановить';
+            btn.classList.remove('btn-secondary');
+            btn.classList.add('btn-danger');
+            
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const source = audioContext.createMediaStreamSource(this.audioTestStream);
+            this.audioAnalyser = audioContext.createAnalyser();
+            this.audioAnalyser.fftSize = 256;
+            source.connect(this.audioAnalyser);
+            
+            const dataArray = new Uint8Array(this.audioAnalyser.frequencyBinCount);
+            
+            this.audioMeterInterval = setInterval(() => {
+                if (!this.audioAnalyser) return;
+                this.audioAnalyser.getByteFrequencyData(dataArray);
+                const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+                const volume = Math.min(100, (avg / 128) * 100 * (Utils.$('#settings-mic-volume')?.value / 100 || 1));
+                meterFill.style.width = volume + '%';
+            }, 50);
+            
+        } catch (e) {
+            console.error('Failed to start mic test:', e);
+            alert('Не удалось получить доступ к микрофону');
+        }
+    },
+
+    saveAudioSettings() {
+        const settings = {
+            inputDevice: Utils.$('#settings-audio-input')?.value,
+            outputDevice: Utils.$('#settings-audio-output')?.value,
+            micVolume: parseInt(Utils.$('#settings-mic-volume')?.value) || 100,
+            outputVolume: parseInt(Utils.$('#settings-output-volume')?.value) || 100,
+            noiseSuppression: Utils.$('#settings-noise-suppression')?.checked ?? true,
+            echoCancellation: Utils.$('#settings-echo-cancellation')?.checked ?? true,
+            autoGain: Utils.$('#settings-auto-gain')?.checked ?? true
+        };
+        
+        Utils.storage.set('flash_audio_settings', settings);
+        
+        if (window.Voice) {
+            Voice.settings = {
+                ...Voice.settings,
+                inputDevice: settings.inputDevice,
+                outputDevice: settings.outputDevice,
+                inputVolume: settings.micVolume / 100,
+                outputVolume: settings.outputVolume / 100,
+                noiseSuppression: settings.noiseSuppression,
+                echoCancellation: settings.echoCancellation,
+                autoGainControl: settings.autoGain
+            };
+            Voice.saveSettings();
+        }
+        
+        const btn = Utils.$('#settings-audio-save');
+        const originalText = btn.textContent;
+        btn.textContent = 'Сохранено!';
+        btn.classList.add('btn-success');
+        setTimeout(() => {
+            btn.textContent = originalText;
+            btn.classList.remove('btn-success');
+        }, 2000);
     },
 
     async updateProfile(form) {
