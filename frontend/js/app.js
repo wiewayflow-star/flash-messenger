@@ -695,6 +695,59 @@ const App = {
         `;
     },
 
+    // Show skeleton loading for DM sidebar
+    showDMSidebarSkeleton() {
+        const container = Utils.$('.dm-list');
+        if (!container) return;
+        container.innerHTML = `
+            <div class="skeleton-dm"><div class="skeleton skeleton-dm-avatar"></div><div class="skeleton-dm-info"><div class="skeleton skeleton-dm-name" style="width: 80%"></div></div></div>
+            <div class="skeleton-dm"><div class="skeleton skeleton-dm-avatar"></div><div class="skeleton-dm-info"><div class="skeleton skeleton-dm-name" style="width: 65%"></div></div></div>
+            <div class="skeleton-dm"><div class="skeleton skeleton-dm-avatar"></div><div class="skeleton-dm-info"><div class="skeleton skeleton-dm-name" style="width: 90%"></div></div></div>
+            <div class="skeleton-dm"><div class="skeleton skeleton-dm-avatar"></div><div class="skeleton-dm-info"><div class="skeleton skeleton-dm-name" style="width: 70%"></div></div></div>
+        `;
+    },
+
+    // Show skeleton loading for friends list
+    showFriendsSkeleton() {
+        const container = Utils.$('#messages-container');
+        if (!container) return;
+        container.innerHTML = `
+            <div class="friends-view" style="padding: 20px;">
+                <div class="skeleton-friend"><div class="skeleton skeleton-friend-avatar"></div><div class="skeleton-friend-info"><div class="skeleton skeleton-friend-name"></div><div class="skeleton skeleton-friend-status"></div></div><div class="skeleton-friend-actions"><div class="skeleton skeleton-friend-btn"></div><div class="skeleton skeleton-friend-btn"></div></div></div>
+                <div class="skeleton-friend"><div class="skeleton skeleton-friend-avatar"></div><div class="skeleton-friend-info"><div class="skeleton skeleton-friend-name" style="width: 100px"></div><div class="skeleton skeleton-friend-status"></div></div><div class="skeleton-friend-actions"><div class="skeleton skeleton-friend-btn"></div><div class="skeleton skeleton-friend-btn"></div></div></div>
+                <div class="skeleton-friend"><div class="skeleton skeleton-friend-avatar"></div><div class="skeleton-friend-info"><div class="skeleton skeleton-friend-name" style="width: 140px"></div><div class="skeleton skeleton-friend-status"></div></div><div class="skeleton-friend-actions"><div class="skeleton skeleton-friend-btn"></div><div class="skeleton skeleton-friend-btn"></div></div></div>
+            </div>
+        `;
+    },
+
+    // Show skeleton loading for search results
+    showSearchSkeleton() {
+        const container = Utils.$('#search-results');
+        if (!container) return;
+        container.innerHTML = `
+            <div class="skeleton-search"><div class="skeleton skeleton-search-avatar"></div><div class="skeleton skeleton-search-name"></div></div>
+            <div class="skeleton-search"><div class="skeleton skeleton-search-avatar"></div><div class="skeleton skeleton-search-name" style="width: 100px"></div></div>
+            <div class="skeleton-search"><div class="skeleton skeleton-search-avatar"></div><div class="skeleton skeleton-search-name" style="width: 160px"></div></div>
+        `;
+    },
+
+    // Show skeleton loading for user profile
+    showProfileSkeleton() {
+        const modal = Utils.$('#user-profile-modal');
+        if (!modal) return;
+        const banner = modal.querySelector('.profile-banner');
+        const avatar = modal.querySelector('.profile-avatar');
+        const name = modal.querySelector('.profile-name');
+        const tag = modal.querySelector('.profile-tag');
+        const bio = modal.querySelector('.profile-bio');
+        
+        if (banner) banner.innerHTML = '<div class="skeleton" style="width: 100%; height: 100%; border-radius: 8px 8px 0 0;"></div>';
+        if (avatar) avatar.innerHTML = '<div class="skeleton" style="width: 100%; height: 100%; border-radius: 50%;"></div>';
+        if (name) name.innerHTML = '<div class="skeleton" style="width: 120px; height: 20px;"></div>';
+        if (tag) tag.innerHTML = '<div class="skeleton" style="width: 80px; height: 14px;"></div>';
+        if (bio) bio.innerHTML = '<div class="skeleton" style="width: 180px; height: 14px;"></div>';
+    },
+
     renderChannels() {
         const container = Utils.$('#channel-list');
         const textChannels = Store.state.channels.filter(c => c.type === 'text');
@@ -1021,6 +1074,9 @@ const App = {
             container.innerHTML = '';
             return;
         }
+
+        // Show skeleton while loading
+        this.showSearchSkeleton();
 
         try {
             const { users } = await API.users.search(query);
@@ -1465,6 +1521,9 @@ const App = {
 
     // Render DM sidebar (always visible when home is selected)
     async renderDMSidebar() {
+        // Show skeleton immediately
+        this.showDMSidebarSkeleton();
+        
         try {
             const { friends } = await API.users.getFriends();
             
@@ -1567,7 +1626,7 @@ const App = {
         // Hide header for friends view
         Utils.$('.content-header')?.classList.add('friends-view-header');
         this.friendsViewActive = true;
-        this.renderFriendsView();
+        this.renderFriendsView(true);
         this.startFriendsRefresh();
     },
 
@@ -1590,12 +1649,18 @@ const App = {
     friendsFilter: 'online',
     friendsSearchQuery: '',
 
-    async renderFriendsView() {
+    async renderFriendsView(showSkeleton = false) {
         const mc = Utils.$('#messages-container');
         if (!mc) return;
         Utils.$('.message-input-container')?.style.setProperty('display', 'none');
         Utils.$('#channel-hash').style.display = 'none';
         Utils.$('#current-channel-name').textContent = '';
+        
+        // Show skeleton only on first load
+        if (showSkeleton) {
+            this.showFriendsSkeleton();
+        }
+        
         try {
             const { friends } = await API.users.getFriends();
             const { incoming, outgoing } = await API.friends.getRequests();
@@ -1639,6 +1704,11 @@ const App = {
 
     // User Profile
     async showUserProfile(userId) {
+        // Show modal with skeleton first
+        this.hideModal('search-modal');
+        this.showModal('user-profile-modal');
+        this.showProfileSkeleton();
+        
         try {
             const { user } = await API.users.get(userId);
             
@@ -1667,12 +1737,9 @@ const App = {
                 addFriendBtn.className = 'btn btn-success';
                 addFriendBtn.onclick = () => this.sendFriendRequest();
             }
-            
-            // Show modal
-            this.hideModal('search-modal');
-            this.showModal('user-profile-modal');
         } catch (error) {
             console.error('Failed to load user profile:', error);
+            this.hideModal('user-profile-modal');
         }
     },
 
