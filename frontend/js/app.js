@@ -1046,8 +1046,8 @@ const App = {
     },
 
     switchSettingsTab(section) {
-        Utils.$('.settings-tab').forEach(t => t.classList.toggle('active', t.dataset.section === section));
-        Utils.$('.settings-section').forEach(s => s.classList.toggle('active', s.dataset.section === section));
+        Utils.$$('.settings-tab').forEach(t => t.classList.toggle('active', t.dataset.section === section));
+        Utils.$$('.settings-section').forEach(s => s.classList.toggle('active', s.dataset.section === section));
         
         // Load audio devices when switching to audio tab
         if (section === 'audio') {
