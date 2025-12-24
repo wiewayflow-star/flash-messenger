@@ -3202,7 +3202,9 @@ const App = {
     // Show invite modal from context menu
     async showServerInviteFromContext(serverId) {
         try {
-            const { code } = await API.servers.createInvite(serverId);
+            const response = await API.servers.createInvite(serverId);
+            const code = response.invite?.code || response.code;
+            
             const modal = Utils.$('#invite-modal');
             const codeDisplay = Utils.$('#invite-code-display');
             
