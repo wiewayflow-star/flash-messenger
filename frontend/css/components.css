@@ -3093,3 +3093,139 @@
 .setting-item .toggle-switch {
     margin-left: auto;
 }
+
+
+/* ============ MENTIONS POPUP ============ */
+
+.mentions-popup {
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    right: 0;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    max-height: 300px;
+    overflow-y: auto;
+    display: none;
+    z-index: 100;
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.mentions-popup.show {
+    display: block;
+    animation: fadeInUp 0.15s ease;
+}
+
+.mentions-header {
+    padding: 8px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.mentions-divider {
+    height: 1px;
+    background: var(--border-color);
+    margin: 4px 12px;
+    opacity: 0.5;
+}
+
+.mention-item {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: background 0.1s ease;
+    gap: 12px;
+}
+
+.mention-item:hover,
+.mention-item.selected {
+    background: var(--bg-tertiary);
+}
+
+.mention-item-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: white;
+    flex-shrink: 0;
+}
+
+.mention-item-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.mention-item-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mention-item-tag {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.mention-item-role {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mention-role-icon {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+}
+
+.mention-role-icon.everyone {
+    background: #5865f2;
+}
+
+.mention-role-icon.here {
+    background: #faa61a;
+}
+
+.mention-role-icon.role {
+    background: var(--accent);
+}
+
+/* Mention in message */
+.mention {
+    background: rgba(138, 43, 226, 0.3);
+    color: var(--accent-light);
+    padding: 0 4px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.mention:hover {
+    background: rgba(138, 43, 226, 0.5);
+    text-decoration: underline;
+}
+
+/* Highlighted message (when user is mentioned) */
+.message.mentioned {
+    background: rgba(250, 166, 26, 0.1);
+    border-left: 3px solid #faa61a;
+    padding-left: 13px;
+}

@@ -281,6 +281,23 @@ const App = {
             }
         }, 1000));
 
+        // Message input for mentions (@)
+        Utils.$('#message-input').addEventListener('input', (e) => {
+            this.handleMentionInput(e.target);
+        });
+
+        // Message input keydown for mentions navigation
+        Utils.$('#message-input').addEventListener('keydown', (e) => {
+            this.handleMentionKeydown(e);
+        });
+
+        // Close mentions popup on click outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.mentions-popup') && !e.target.closest('#message-input')) {
+                this.hideMentionsPopup();
+            }
+        });
+
         // Create server form
         Utils.$('#create-server-form').addEventListener('submit', (e) => {
             e.preventDefault();
@@ -2600,6 +2617,299 @@ const App = {
         this.isGlobalDeafened = Utils.storage.get('flash_global_deafened') || false;
         this.updateMuteButtonUI();
         this.updateDeafenButtonUI();
+    },
+
+    // ============ MENTIONS SYSTEM ============
+    
+    mentionState: {
+        active: false,
+        startPos: -1,
+        query: '',
+        selectedIndex: 0,
+        items: []
+    },
+    
+    recentMentions: [], // Store recently mentioned users
+
+    // Handle input for @ mentions
+    handleMentionInput(input) {
+        const value = input.value;
+        const cursorPos = input.selectionStart;
+        
+        // Find @ symbol before cursor
+        let atPos = -1;
+        for (let i = cursorPos - 1; i >= 0; i--) {
+            if (value[i] === '@') {
+                atPos = i;
+                break;
+            }
+            if (value[i] === ' ' || value[i] === '\n') break;
+        }
+        
+        if (atPos >= 0) {
+            const query = value.substring(atPos + 1, cursorPos).toLowerCase();
+            this.mentionState.active = true;
+            this.mentionState.startPos = atPos;
+            this.mentionState.query = query;
+            this.mentionState.selectedIndex = 0;
+            this.showMentionsPopup(query);
+        } else {
+            this.hideMentionsPopup();
+        }
+    },
+
+    // Handle keyboard navigation in mentions popup
+    handleMentionKeydown(e) {
+        if (!this.mentionState.active) return;
+        
+        const popup = Utils.$('#mentions-popup');
+        const items = popup.querySelectorAll('.mention-item');
+        
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            this.mentionState.selectedIndex = Math.min(this.mentionState.selectedIndex + 1, items.length - 1);
+            this.updateMentionSelection();
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            this.mentionState.selectedIndex = Math.max(this.mentionState.selectedIndex - 1, 0);
+            this.updateMentionSelection();
+        } else if (e.key === 'Enter' || e.key === 'Tab') {
+            if (items.length > 0) {
+                e.preventDefault();
+                const selectedItem = items[this.mentionState.selectedIndex];
+                if (selectedItem) {
+                    this.insertMention(selectedItem.dataset.mentionId, selectedItem.dataset.mentionName, selectedItem.dataset.mentionType);
+                }
+            }
+        } else if (e.key === 'Escape') {
+            this.hideMentionsPopup();
+        }
+    },
+
+    // Update visual selection in popup
+    updateMentionSelection() {
+        const popup = Utils.$('#mentions-popup');
+        const items = popup.querySelectorAll('.mention-item');
+        items.forEach((item, i) => {
+            item.classList.toggle('selected', i === this.mentionState.selectedIndex);
+        });
+        // Scroll selected item into view
+        const selected = items[this.mentionState.selectedIndex];
+        if (selected) {
+            selected.scrollIntoView({ block: 'nearest' });
+        }
+    },
+
+    // Show mentions popup with filtered results
+    showMentionsPopup(query) {
+        const popup = Utils.$('#mentions-popup');
+        let html = '';
+        let items = [];
+        
+        // Get participants based on context
+        if (Store.state.currentServer) {
+            // Server context - show members and roles
+            const members = Store.state.members || [];
+            const friends = Store.state.friends || [];
+            
+            // Filter members by query
+            let filteredMembers = members.filter(m => 
+                m.username.toLowerCase().includes(query) && m.id !== Store.state.user?.id
+            );
+            
+            // Sort: friends first, then recent mentions, then others
+            const friendIds = new Set(friends.map(f => f.id));
+            const recentIds = new Set(this.recentMentions);
+            
+            filteredMembers.sort((a, b) => {
+                const aFriend = friendIds.has(a.id) ? 0 : 1;
+                const bFriend = friendIds.has(b.id) ? 0 : 1;
+                if (aFriend !== bFriend) return aFriend - bFriend;
+                
+                const aRecent = recentIds.has(a.id) ? 0 : 1;
+                const bRecent = recentIds.has(b.id) ? 0 : 1;
+                return aRecent - bRecent;
+            });
+            
+            // Limit to 6 members
+            filteredMembers = filteredMembers.slice(0, 6);
+            
+            if (filteredMembers.length > 0) {
+                html += '<div class="mentions-header">Участники</div>';
+                filteredMembers.forEach(m => {
+                    const avatarStyle = m.avatar 
+                        ? `background-image: url(${m.avatar}); background-size: cover;`
+                        : `background: ${Utils.getUserColor(m.id)}`;
+                    html += `
+                        <div class="mention-item" data-mention-id="${m.id}" data-mention-name="${Utils.escapeHtml(m.username)}" data-mention-type="user">
+                            <div class="mention-item-avatar" style="${avatarStyle}">${m.avatar ? '' : Utils.getInitials(m.username)}</div>
+                            <div class="mention-item-info">
+                                <div class="mention-item-name">${Utils.escapeHtml(m.username)}</div>
+                                <div class="mention-item-tag">${m.tag || ''}</div>
+                            </div>
+                        </div>
+                    `;
+                    items.push({ id: m.id, name: m.username, type: 'user' });
+                });
+            }
+            
+            // Add roles section
+            const roles = [
+                { id: 'everyone', name: 'everyone', display: '@everyone', desc: 'Уведомить всех' },
+                { id: 'here', name: 'here', display: '@here', desc: 'Уведомить онлайн' }
+            ];
+            
+            const filteredRoles = roles.filter(r => r.name.includes(query));
+            
+            if (filteredRoles.length > 0) {
+                if (filteredMembers.length > 0) {
+                    html += '<div class="mentions-divider"></div>';
+                }
+                html += '<div class="mentions-header">Роли</div>';
+                filteredRoles.forEach(r => {
+                    html += `
+                        <div class="mention-item" data-mention-id="${r.id}" data-mention-name="${r.name}" data-mention-type="role">
+                            <div class="mention-item-role">
+                                <div class="mention-role-icon ${r.id}">@</div>
+                                <div class="mention-item-info">
+                                    <div class="mention-item-name">${r.display}</div>
+                                    <div class="mention-item-tag">${r.desc}</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    items.push({ id: r.id, name: r.name, type: 'role' });
+                });
+            }
+        } else if (Store.state.currentDM) {
+            // DM context - show other user
+            const otherUser = Store.state.currentDMUser;
+            if (otherUser && otherUser.username.toLowerCase().includes(query)) {
+                html += '<div class="mentions-header">Участники</div>';
+                const avatarStyle = otherUser.avatar 
+                    ? `background-image: url(${otherUser.avatar}); background-size: cover;`
+                    : `background: ${Utils.getUserColor(otherUser.id)}`;
+                html += `
+                    <div class="mention-item" data-mention-id="${otherUser.id}" data-mention-name="${Utils.escapeHtml(otherUser.username)}" data-mention-type="user">
+                        <div class="mention-item-avatar" style="${avatarStyle}">${otherUser.avatar ? '' : Utils.getInitials(otherUser.username)}</div>
+                        <div class="mention-item-info">
+                            <div class="mention-item-name">${Utils.escapeHtml(otherUser.username)}</div>
+                            <div class="mention-item-tag">${otherUser.tag || ''}</div>
+                        </div>
+                    </div>
+                `;
+                items.push({ id: otherUser.id, name: otherUser.username, type: 'user' });
+            }
+        }
+        
+        this.mentionState.items = items;
+        
+        if (items.length === 0) {
+            this.hideMentionsPopup();
+            return;
+        }
+        
+        popup.innerHTML = html;
+        popup.classList.add('show');
+        
+        // Bind click events
+        popup.querySelectorAll('.mention-item').forEach((item, i) => {
+            item.addEventListener('click', () => {
+                this.insertMention(item.dataset.mentionId, item.dataset.mentionName, item.dataset.mentionType);
+            });
+            item.addEventListener('mouseenter', () => {
+                this.mentionState.selectedIndex = i;
+                this.updateMentionSelection();
+            });
+        });
+        
+        this.updateMentionSelection();
+    },
+
+    // Hide mentions popup
+    hideMentionsPopup() {
+        const popup = Utils.$('#mentions-popup');
+        popup.classList.remove('show');
+        this.mentionState.active = false;
+        this.mentionState.startPos = -1;
+        this.mentionState.query = '';
+        this.mentionState.items = [];
+    },
+
+    // Insert mention into input
+    insertMention(id, name, type) {
+        const input = Utils.$('#message-input');
+        const value = input.value;
+        const startPos = this.mentionState.startPos;
+        const cursorPos = input.selectionStart;
+        
+        // Create mention text
+        const mentionText = type === 'role' ? `@${name}` : `@${name}`;
+        
+        // Replace @query with mention
+        const newValue = value.substring(0, startPos) + mentionText + ' ' + value.substring(cursorPos);
+        input.value = newValue;
+        
+        // Set cursor position after mention
+        const newCursorPos = startPos + mentionText.length + 1;
+        input.setSelectionRange(newCursorPos, newCursorPos);
+        input.focus();
+        
+        // Add to recent mentions
+        if (type === 'user' && !this.recentMentions.includes(id)) {
+            this.recentMentions.unshift(id);
+            if (this.recentMentions.length > 5) this.recentMentions.pop();
+        }
+        
+        this.hideMentionsPopup();
+    },
+
+    // Parse mentions in message content for display
+    parseMentions(content) {
+        if (!content) return content;
+        
+        // Replace @username with styled mention
+        // Match @word patterns
+        return content.replace(/@(\w+)/g, (match, name) => {
+            const lowerName = name.toLowerCase();
+            
+            // Check for special roles
+            if (lowerName === 'everyone' || lowerName === 'here') {
+                return `<span class="mention" data-mention-type="role" data-mention-name="${name}">@${name}</span>`;
+            }
+            
+            // Check if it's a user mention
+            const members = Store.state.members || [];
+            const member = members.find(m => m.username.toLowerCase() === lowerName);
+            if (member) {
+                return `<span class="mention" data-mention-type="user" data-mention-id="${member.id}">@${name}</span>`;
+            }
+            
+            // Check DM user
+            if (Store.state.currentDMUser?.username.toLowerCase() === lowerName) {
+                return `<span class="mention" data-mention-type="user" data-mention-id="${Store.state.currentDMUser.id}">@${name}</span>`;
+            }
+            
+            return match; // Return original if not a valid mention
+        });
+    },
+
+    // Check if current user is mentioned in message
+    isUserMentioned(content) {
+        if (!content) return false;
+        const username = Store.state.user?.username?.toLowerCase();
+        if (!username) return false;
+        
+        // Check for direct mention
+        if (content.toLowerCase().includes(`@${username}`)) return true;
+        
+        // Check for @everyone
+        if (content.toLowerCase().includes('@everyone')) return true;
+        
+        // Check for @here (only if user was online when message was sent - simplified: always highlight)
+        if (content.toLowerCase().includes('@here')) return true;
+        
+        return false;
     }
 };
 

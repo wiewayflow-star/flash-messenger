@@ -88,13 +88,22 @@ const Components = {
             return this.callEndedMessage(msg);
         }
         
-        const content = Utils.parseMarkdown(Utils.escapeHtml(msg.content));
+        let content = Utils.parseMarkdown(Utils.escapeHtml(msg.content));
+        // Parse mentions (@username, @everyone, @here)
+        if (window.App) {
+            content = App.parseMentions(content);
+        }
+        
         const encryptedIcon = msg.encrypted ? '<svg class="encrypted-icon" viewBox="0 0 24 24" width="12" height="12" title="Зашифровано"><path fill="currentColor" d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>' : '';
+        
+        // Check if current user is mentioned
+        const isMentioned = window.App && App.isUserMentioned(msg.content);
+        const mentionedClass = isMentioned ? ' mentioned' : '';
         
         if (isGrouped) {
             // Continuation message - no avatar/name, just content
             return `
-                <div class="message message-grouped" data-message="${msg.id}">
+                <div class="message message-grouped${mentionedClass}" data-message="${msg.id}">
                     <div class="message-timestamp-hover">${Utils.formatTimeShort(msg.created_at)}</div>
                     <div class="message-content">
                         <div class="message-text">${content}</div>
@@ -113,7 +122,7 @@ const Components = {
         const avatarContent = msg.author?.avatar ? '' : initial;
         
         return `
-            <div class="message message-first" data-message="${msg.id}">
+            <div class="message message-first${mentionedClass}" data-message="${msg.id}">
                 <div class="message-avatar" style="${avatarStyle}">${avatarContent}</div>
                 <div class="message-content">
                     <div class="message-header">
