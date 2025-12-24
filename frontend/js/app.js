@@ -284,6 +284,16 @@ const App = {
             }
         });
 
+        // Messages container scroll - track if user scrolled up
+        Utils.$('#messages-container')?.addEventListener('scroll', () => {
+            this.checkScrollPosition();
+        });
+
+        // New messages bar click - scroll to bottom
+        Utils.$('#new-messages-bar')?.addEventListener('click', () => {
+            this.scrollToBottom();
+        });
+
         // Message form
         Utils.$('#message-form').addEventListener('submit', (e) => {
             e.preventDefault();
@@ -853,6 +863,10 @@ const App = {
         // Stop friends view refresh
         this.stopFriendsRefresh();
 
+        // Reset new messages bar
+        this.hideNewMessagesBar();
+        this.isUserScrolledUp = false;
+
         // Exit DM mode
         this.isDMMode = false;
         Store.state.currentDM = null;
@@ -968,9 +982,70 @@ const App = {
         }
     },
 
+    // New messages tracking
+    newMessagesCount: 0,
+    newMessagesFirstTime: null,
+    isUserScrolledUp: false,
+
     scrollToBottom() {
         const container = Utils.$('#messages-container');
         container.scrollTop = container.scrollHeight;
+        this.hideNewMessagesBar();
+    },
+
+    // Check if user is scrolled up from bottom
+    checkScrollPosition() {
+        const container = Utils.$('#messages-container');
+        if (!container) return false;
+        const threshold = 100; // pixels from bottom
+        const isAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < threshold;
+        this.isUserScrolledUp = !isAtBottom;
+        
+        // Hide bar if user scrolled to bottom
+        if (isAtBottom) {
+            this.hideNewMessagesBar();
+        }
+        return this.isUserScrolledUp;
+    },
+
+    // Show new messages bar
+    showNewMessagesBar(count, firstTime) {
+        const bar = Utils.$('#new-messages-bar');
+        const textEl = Utils.$('#new-messages-text');
+        if (!bar || !textEl) return;
+
+        this.newMessagesCount = count;
+        this.newMessagesFirstTime = firstTime;
+
+        // Format time
+        const time = new Date(firstTime).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+        
+        // Plural form
+        let msgWord = 'сообщение';
+        if (count > 1 && count < 5) msgWord = 'сообщения';
+        else if (count >= 5 || count === 0) msgWord = 'сообщений';
+        
+        textEl.textContent = `${count} новое ${msgWord} с ${time}`;
+        bar.classList.add('show');
+    },
+
+    // Hide new messages bar
+    hideNewMessagesBar() {
+        const bar = Utils.$('#new-messages-bar');
+        if (bar) {
+            bar.classList.remove('show');
+        }
+        this.newMessagesCount = 0;
+        this.newMessagesFirstTime = null;
+    },
+
+    // Add new message while scrolled up
+    addNewMessageWhileScrolledUp(message) {
+        if (!this.newMessagesFirstTime) {
+            this.newMessagesFirstTime = message.created_at || new Date().toISOString();
+        }
+        this.newMessagesCount++;
+        this.showNewMessagesBar(this.newMessagesCount, this.newMessagesFirstTime);
     },
 
     async sendMessage() {
@@ -2246,6 +2321,11 @@ const App = {
     // DM Chat
     async openDM(userId) {
         this.stopFriendsRefresh();
+        
+        // Reset new messages bar
+        this.hideNewMessagesBar();
+        this.isUserScrolledUp = false;
+        
         try {
             // Create or get existing DM channel
             const { dmChannel } = await API.dm.create(userId);

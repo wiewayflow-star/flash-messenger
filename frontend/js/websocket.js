@@ -122,7 +122,12 @@ const WS = {
                     Store.addMessage(payload.message);
                     if (window.App) {
                         App.renderMessages();
-                        App.scrollToBottom();
+                        // Check if user is scrolled up
+                        if (App.isUserScrolledUp) {
+                            App.addNewMessageWhileScrolledUp(payload.message);
+                        } else {
+                            App.scrollToBottom();
+                        }
                     }
                 } else {
                     // Message in another channel - track as unread for server
@@ -143,7 +148,12 @@ const WS = {
                     Store.addMessage(payload.message);
                     if (window.App) {
                         App.renderMessages();
-                        App.scrollToBottom();
+                        // Check if user is scrolled up
+                        if (App.isUserScrolledUp) {
+                            App.addNewMessageWhileScrolledUp(payload.message);
+                        } else {
+                            App.scrollToBottom();
+                        }
                     }
                 } else {
                     // User is not in this DM chat - show notification and increment unread counter

@@ -607,6 +607,7 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    position: relative;
 }
 
 .messages-list {
@@ -615,7 +616,59 @@
     padding: 16px;
     display: flex;
     flex-direction: column;
+    justify-content: flex-end;
     gap: 4px;
+    min-height: 100%;
+}
+
+/* New messages bar */
+.new-messages-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--accent);
+    color: white;
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    z-index: 10;
+    font-size: 13px;
+    font-weight: 500;
+    opacity: 0;
+    transform: translateY(100%);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    pointer-events: none;
+}
+
+.new-messages-bar.show {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+.new-messages-bar:hover {
+    background: var(--accent-light);
+}
+
+.new-messages-bar-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.new-messages-bar-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.new-messages-bar-right svg {
+    width: 18px;
+    height: 18px;
 }
 
 /* ============ MESSAGES ============ */
