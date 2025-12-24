@@ -750,6 +750,7 @@
 
 .message-input-container {
     padding: 0 16px 24px;
+    position: relative;
 }
 
 .typing-indicator {

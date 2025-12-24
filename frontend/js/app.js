@@ -2648,6 +2648,7 @@ const App = {
         
         if (atPos >= 0) {
             const query = value.substring(atPos + 1, cursorPos).toLowerCase();
+            console.log('[Mentions] @ found at', atPos, 'query:', query);
             this.mentionState.active = true;
             this.mentionState.startPos = atPos;
             this.mentionState.query = query;
@@ -2710,25 +2711,20 @@ const App = {
         if (Store.state.currentServer) {
             // Server context - show members and roles
             const members = Store.state.members || [];
-            const friends = Store.state.friends || [];
             
-            // Filter members by query
+            // Filter members by query (exclude self)
             let filteredMembers = members.filter(m => 
                 m.username.toLowerCase().includes(query) && m.id !== Store.state.user?.id
             );
             
-            // Sort: friends first, then recent mentions, then others
-            const friendIds = new Set(friends.map(f => f.id));
+            // Sort: recent mentions first, then alphabetically
             const recentIds = new Set(this.recentMentions);
             
             filteredMembers.sort((a, b) => {
-                const aFriend = friendIds.has(a.id) ? 0 : 1;
-                const bFriend = friendIds.has(b.id) ? 0 : 1;
-                if (aFriend !== bFriend) return aFriend - bFriend;
-                
                 const aRecent = recentIds.has(a.id) ? 0 : 1;
                 const bRecent = recentIds.has(b.id) ? 0 : 1;
-                return aRecent - bRecent;
+                if (aRecent !== bRecent) return aRecent - bRecent;
+                return a.username.localeCompare(b.username);
             });
             
             // Limit to 6 members
@@ -2800,6 +2796,10 @@ const App = {
                 `;
                 items.push({ id: otherUser.id, name: otherUser.username, type: 'user' });
             }
+        } else {
+            // No context - hide popup
+            this.hideMentionsPopup();
+            return;
         }
         
         this.mentionState.items = items;
@@ -2811,6 +2811,7 @@ const App = {
         
         popup.innerHTML = html;
         popup.classList.add('show');
+        console.log('[Mentions] Showing popup with', items.length, 'items');
         
         // Bind click events
         popup.querySelectorAll('.mention-item').forEach((item, i) => {
