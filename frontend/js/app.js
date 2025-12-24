@@ -3205,22 +3205,45 @@ const App = {
             const response = await API.servers.createInvite(serverId);
             const code = response.invite?.code || response.code;
             
+            // Generate invite link
+            const baseUrl = window.location.origin;
+            const inviteLink = `${baseUrl}?invite=${code}`;
+            
             const modal = Utils.$('#invite-modal');
             const codeDisplay = Utils.$('#invite-code-display');
+            const linkDisplay = Utils.$('#invite-link-display');
             
             if (codeDisplay) {
                 codeDisplay.value = code;
             }
             
-            // Bind copy button
-            const copyBtn = Utils.$('#copy-invite-btn');
-            copyBtn?.addEventListener('click', () => {
-                navigator.clipboard.writeText(code);
-                copyBtn.textContent = 'Скопировано!';
+            if (linkDisplay) {
+                linkDisplay.value = inviteLink;
+            }
+            
+            // Bind copy link button
+            const copyLinkBtn = Utils.$('#copy-invite-link-btn');
+            const newCopyLinkBtn = copyLinkBtn.cloneNode(true);
+            copyLinkBtn.parentNode.replaceChild(newCopyLinkBtn, copyLinkBtn);
+            newCopyLinkBtn.addEventListener('click', () => {
+                navigator.clipboard.writeText(inviteLink);
+                newCopyLinkBtn.textContent = 'Скопировано!';
                 setTimeout(() => {
-                    copyBtn.textContent = 'Копировать';
+                    newCopyLinkBtn.textContent = 'Копировать';
                 }, 2000);
-            }, { once: true });
+            });
+            
+            // Bind copy code button
+            const copyBtn = Utils.$('#copy-invite-btn');
+            const newCopyBtn = copyBtn.cloneNode(true);
+            copyBtn.parentNode.replaceChild(newCopyBtn, copyBtn);
+            newCopyBtn.addEventListener('click', () => {
+                navigator.clipboard.writeText(code);
+                newCopyBtn.textContent = 'Скопировано!';
+                setTimeout(() => {
+                    newCopyBtn.textContent = 'Копировать';
+                }, 2000);
+            });
             
             this.showModal('invite-modal');
         } catch (error) {
