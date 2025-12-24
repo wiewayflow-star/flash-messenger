@@ -1091,6 +1091,17 @@ const App = {
             Utils.$('#settings-echo-cancellation').checked = savedSettings.echoCancellation ?? true;
             Utils.$('#settings-auto-gain').checked = savedSettings.autoGain ?? true;
             
+            // Store initial values for change detection
+            this.initialAudioSettings = {
+                inputDevice: Utils.$('#settings-audio-input')?.value || '',
+                outputDevice: Utils.$('#settings-audio-output')?.value || '',
+                micVolume: parseInt(Utils.$('#settings-mic-volume')?.value) || 100,
+                outputVolume: parseInt(Utils.$('#settings-output-volume')?.value) || 100,
+                noiseSuppression: Utils.$('#settings-noise-suppression')?.checked ?? true,
+                echoCancellation: Utils.$('#settings-echo-cancellation')?.checked ?? true,
+                autoGain: Utils.$('#settings-auto-gain')?.checked ?? true
+            };
+            
             this.bindAudioSettingsEvents();
         } catch (e) {
             console.error('Failed to load audio devices:', e);
@@ -1243,8 +1254,8 @@ const App = {
 
     saveAudioSettings() {
         const settings = {
-            inputDevice: Utils.$('#settings-audio-input')?.value,
-            outputDevice: Utils.$('#settings-audio-output')?.value,
+            inputDevice: Utils.$('#settings-audio-input')?.value || '',
+            outputDevice: Utils.$('#settings-audio-output')?.value || '',
             micVolume: parseInt(Utils.$('#settings-mic-volume')?.value) || 100,
             outputVolume: parseInt(Utils.$('#settings-output-volume')?.value) || 100,
             noiseSuppression: Utils.$('#settings-noise-suppression')?.checked ?? true,
@@ -1252,22 +1263,25 @@ const App = {
             autoGain: Utils.$('#settings-auto-gain')?.checked ?? true
         };
         
-        // Check if settings changed
-        const savedSettings = Utils.storage.get('flash_audio_settings') || {};
+        // Check if settings changed from initial values (when settings were loaded)
+        const initial = this.initialAudioSettings || {};
         const hasChanges = 
-            settings.inputDevice !== (savedSettings.inputDevice || '') ||
-            settings.outputDevice !== (savedSettings.outputDevice || '') ||
-            settings.micVolume !== (savedSettings.micVolume ?? 100) ||
-            settings.outputVolume !== (savedSettings.outputVolume ?? 100) ||
-            settings.noiseSuppression !== (savedSettings.noiseSuppression ?? true) ||
-            settings.echoCancellation !== (savedSettings.echoCancellation ?? true) ||
-            settings.autoGain !== (savedSettings.autoGain ?? true);
+            settings.inputDevice !== initial.inputDevice ||
+            settings.outputDevice !== initial.outputDevice ||
+            settings.micVolume !== initial.micVolume ||
+            settings.outputVolume !== initial.outputVolume ||
+            settings.noiseSuppression !== initial.noiseSuppression ||
+            settings.echoCancellation !== initial.echoCancellation ||
+            settings.autoGain !== initial.autoGain;
         
         if (!hasChanges) {
             return; // Nothing changed, don't show success
         }
         
         Utils.storage.set('flash_audio_settings', settings);
+        
+        // Update initial settings to current (so next save won't trigger if nothing changed)
+        this.initialAudioSettings = { ...settings };
         
         if (window.Voice) {
             Voice.settings = {
