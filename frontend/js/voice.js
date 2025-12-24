@@ -6,6 +6,7 @@ const Voice = {
     // State
     currentChannel: null,
     localStream: null,
+    processedStream: null, // Stream after audio processing
     peers: new Map(), // peerId -> { connection, stream, audioElement }
     isMuted: false,
     isDeafened: false,
@@ -16,6 +17,13 @@ const Voice = {
     audioContext: null,
     analyser: null,
     voiceActivityInterval: null,
+    
+    // Audio processing nodes
+    audioProcessingContext: null,
+    noiseGate: null,
+    compressor: null,
+    highpassFilter: null,
+    lowpassFilter: null,
     
     // Settings
     settings: {
@@ -28,7 +36,8 @@ const Voice = {
         echoCancellation: true,
         autoGainControl: true,
         pushToTalk: false,
-        pushToTalkKey: 'KeyV'
+        pushToTalkKey: 'KeyV',
+        noiseGateThreshold: -50 // dB threshold for noise gate
     },
 
     // Initialize voice system
@@ -46,11 +55,127 @@ const Voice = {
         if (saved) {
             this.settings = { ...this.settings, ...saved };
         }
+        // Also load from audio settings
+        const audioSettings = Utils.storage.get('flash_audio_settings');
+        if (audioSettings) {
+            this.settings.inputDevice = audioSettings.inputDevice || 'default';
+            this.settings.outputDevice = audioSettings.outputDevice || 'default';
+            this.settings.inputVolume = audioSettings.micVolume || 100;
+            this.settings.outputVolume = audioSettings.outputVolume || 100;
+            this.settings.noiseSuppression = audioSettings.noiseSuppression ?? true;
+            this.settings.echoCancellation = audioSettings.echoCancellation ?? true;
+            this.settings.autoGainControl = audioSettings.autoGain ?? true;
+        }
     },
 
     // Save settings to localStorage
     saveSettings() {
         Utils.storage.set('flash_voice_settings', this.settings);
+    },
+
+    // Process audio stream with real noise suppression
+    async processAudioStream(stream) {
+        if (!this.settings.noiseSuppression && !this.settings.echoCancellation) {
+            return stream; // No processing needed
+        }
+
+        try {
+            // Create audio context for processing
+            this.audioProcessingContext = new (window.AudioContext || window.webkitAudioContext)({
+                sampleRate: 48000
+            });
+
+            const source = this.audioProcessingContext.createMediaStreamSource(stream);
+            const destination = this.audioProcessingContext.createMediaStreamDestination();
+
+            // High-pass filter to remove low frequency rumble/hum (below 80Hz)
+            this.highpassFilter = this.audioProcessingContext.createBiquadFilter();
+            this.highpassFilter.type = 'highpass';
+            this.highpassFilter.frequency.value = 80;
+            this.highpassFilter.Q.value = 0.7;
+
+            // Low-pass filter to remove high frequency hiss (above 12kHz)
+            this.lowpassFilter = this.audioProcessingContext.createBiquadFilter();
+            this.lowpassFilter.type = 'lowpass';
+            this.lowpassFilter.frequency.value = 12000;
+            this.lowpassFilter.Q.value = 0.7;
+
+            // Compressor for dynamic range control and to reduce loud noises
+            this.compressor = this.audioProcessingContext.createDynamicsCompressor();
+            this.compressor.threshold.value = -24; // Start compressing at -24dB
+            this.compressor.knee.value = 12; // Soft knee
+            this.compressor.ratio.value = 4; // 4:1 compression ratio
+            this.compressor.attack.value = 0.003; // Fast attack (3ms)
+            this.compressor.release.value = 0.25; // 250ms release
+
+            // Gain node for volume control
+            const gainNode = this.audioProcessingContext.createGain();
+            gainNode.gain.value = this.settings.inputVolume / 100;
+
+            // Connect the chain: source -> highpass -> lowpass -> compressor -> gain -> destination
+            source.connect(this.highpassFilter);
+            this.highpassFilter.connect(this.lowpassFilter);
+            this.lowpassFilter.connect(this.compressor);
+            this.compressor.connect(gainNode);
+            gainNode.connect(destination);
+
+            // Store gain node for later adjustment
+            this.inputGainNode = gainNode;
+
+            console.log('[Voice] Audio processing chain created');
+            return destination.stream;
+
+        } catch (e) {
+            console.error('[Voice] Failed to create audio processing chain:', e);
+            return stream; // Return original stream on error
+        }
+    },
+
+    // Get processed audio stream with noise suppression
+    async getProcessedAudioStream() {
+        const rawStream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+                deviceId: this.settings.inputDevice !== 'default' ? { exact: this.settings.inputDevice } : undefined,
+                noiseSuppression: this.settings.noiseSuppression,
+                echoCancellation: this.settings.echoCancellation,
+                autoGainControl: this.settings.autoGainControl,
+                sampleRate: 48000,
+                sampleSize: 16,
+                channelCount: 1
+            },
+            video: false
+        });
+        
+        // Store raw stream for cleanup
+        this.rawStream = rawStream;
+        
+        // Apply audio processing
+        const processedStream = await this.processAudioStream(rawStream);
+        return processedStream;
+    },
+
+    // Cleanup audio resources
+    async cleanupAudio() {
+        if (this.localStream) {
+            this.localStream.getTracks().forEach(track => track.stop());
+            this.localStream = null;
+        }
+        
+        if (this.rawStream) {
+            this.rawStream.getTracks().forEach(track => track.stop());
+            this.rawStream = null;
+        }
+        
+        if (this.audioProcessingContext) {
+            try {
+                await this.audioProcessingContext.close();
+            } catch (e) {}
+            this.audioProcessingContext = null;
+            this.inputGainNode = null;
+            this.highpassFilter = null;
+            this.lowpassFilter = null;
+            this.compressor = null;
+        }
     },
 
     // Get available audio/video devices
@@ -114,7 +239,7 @@ const Voice = {
 
         try {
             // Get user media with high quality audio settings
-            this.localStream = await navigator.mediaDevices.getUserMedia({
+            const rawStream = await navigator.mediaDevices.getUserMedia({
                 audio: {
                     deviceId: this.settings.inputDevice !== 'default' ? { exact: this.settings.inputDevice } : undefined,
                     noiseSuppression: this.settings.noiseSuppression,
@@ -126,6 +251,11 @@ const Voice = {
                 },
                 video: false
             });
+
+            // Apply additional audio processing
+            this.localStream = await this.processAudioStream(rawStream);
+            // Keep reference to raw stream for cleanup
+            this.rawStream = rawStream;
 
             this.currentChannel = channelId;
             this.currentChannelName = channelName;
@@ -185,6 +315,24 @@ const Voice = {
         if (this.localStream) {
             this.localStream.getTracks().forEach(track => track.stop());
             this.localStream = null;
+        }
+        
+        // Stop raw stream (before processing)
+        if (this.rawStream) {
+            this.rawStream.getTracks().forEach(track => track.stop());
+            this.rawStream = null;
+        }
+        
+        // Close audio processing context
+        if (this.audioProcessingContext) {
+            try {
+                await this.audioProcessingContext.close();
+            } catch (e) {}
+            this.audioProcessingContext = null;
+            this.inputGainNode = null;
+            this.highpassFilter = null;
+            this.lowpassFilter = null;
+            this.compressor = null;
         }
 
         // Stop voice activity detection
@@ -1718,17 +1866,8 @@ const Voice = {
         try {
             // Only get new media if we don't have it already
             if (!this.localStream) {
-                this.localStream = await navigator.mediaDevices.getUserMedia({
-                    audio: {
-                        noiseSuppression: this.settings.noiseSuppression,
-                        echoCancellation: this.settings.echoCancellation,
-                        autoGainControl: this.settings.autoGainControl,
-                        sampleRate: 48000,
-                        sampleSize: 16,
-                        channelCount: 1
-                    },
-                    video: false
-                });
+                // Get processed audio stream with noise suppression
+                this.localStream = await this.getProcessedAudioStream();
             }
 
             // Send accept message
@@ -1953,17 +2092,8 @@ const Voice = {
         console.log('[Voice] Rejoining call:', dmId);
         
         try {
-            this.localStream = await navigator.mediaDevices.getUserMedia({
-                audio: {
-                    noiseSuppression: this.settings.noiseSuppression,
-                    echoCancellation: this.settings.echoCancellation,
-                    autoGainControl: this.settings.autoGainControl,
-                    sampleRate: 48000,
-                    sampleSize: 16,
-                    channelCount: 1
-                },
-                video: false
-            });
+            // Get processed audio stream with noise suppression
+            this.localStream = await this.getProcessedAudioStream();
 
             // Send rejoin request
             WS.send('dm_call_rejoin', {
@@ -2000,17 +2130,8 @@ const Voice = {
         console.log('[Voice] Starting call to:', targetUser);
 
         try {
-            this.localStream = await navigator.mediaDevices.getUserMedia({
-                audio: {
-                    noiseSuppression: this.settings.noiseSuppression,
-                    echoCancellation: this.settings.echoCancellation,
-                    autoGainControl: this.settings.autoGainControl,
-                    sampleRate: 48000,
-                    sampleSize: 16,
-                    channelCount: 1
-                },
-                video: false
-            });
+            // Get processed audio stream with noise suppression
+            this.localStream = await this.getProcessedAudioStream();
 
             // Send call request
             WS.send('dm_call_start', {
@@ -2423,15 +2544,8 @@ const Voice = {
         try {
             // Get user media
             if (!this.localStream) {
-                this.localStream = await navigator.mediaDevices.getUserMedia({
-                    audio: {
-                        noiseSuppression: this.settings.noiseSuppression,
-                        echoCancellation: this.settings.echoCancellation,
-                        autoGainControl: this.settings.autoGainControl,
-                        sampleRate: 48000
-                    },
-                    video: false
-                });
+                // Get processed audio stream with noise suppression
+                this.localStream = await this.getProcessedAudioStream();
             }
 
             this.currentGroupCall = groupCall;
@@ -2674,6 +2788,24 @@ const Voice = {
             this.localStream.getTracks().forEach(track => track.stop());
             this.localStream = null;
         }
+        
+        // Stop raw stream (before processing)
+        if (this.rawStream) {
+            this.rawStream.getTracks().forEach(track => track.stop());
+            this.rawStream = null;
+        }
+        
+        // Close audio processing context
+        if (this.audioProcessingContext) {
+            try {
+                this.audioProcessingContext.close();
+            } catch (e) {}
+            this.audioProcessingContext = null;
+            this.inputGainNode = null;
+            this.highpassFilter = null;
+            this.lowpassFilter = null;
+            this.compressor = null;
+        }
 
         // For DM calls - show "disconnected" UI with rejoin button instead of closing
         // Unless:
@@ -2819,18 +2951,8 @@ const Voice = {
         console.log('[Voice] Rejoining call');
         
         try {
-            // Get media again
-            this.localStream = await navigator.mediaDevices.getUserMedia({
-                audio: {
-                    noiseSuppression: this.settings.noiseSuppression,
-                    echoCancellation: this.settings.echoCancellation,
-                    autoGainControl: this.settings.autoGainControl,
-                    sampleRate: 48000,
-                    sampleSize: 16,
-                    channelCount: 1
-                },
-                video: false
-            });
+            // Get processed audio stream with noise suppression
+            this.localStream = await this.getProcessedAudioStream();
             
             // Clear self disconnect timeout
             this.clearSelfDisconnectTimeout();
@@ -3071,18 +3193,8 @@ const Voice = {
         if (modal) modal.remove();
 
         try {
-            // Get user media
-            this.localStream = await navigator.mediaDevices.getUserMedia({
-                audio: {
-                    noiseSuppression: this.settings.noiseSuppression,
-                    echoCancellation: this.settings.echoCancellation,
-                    autoGainControl: this.settings.autoGainControl,
-                    sampleRate: 48000,
-                    sampleSize: 16,
-                    channelCount: 1
-                },
-                video: false
-            });
+            // Get processed audio stream with noise suppression
+            this.localStream = await this.getProcessedAudioStream();
 
             // Accept invite via API (adds user to members)
             const groupId = this.pendingGroupCall.groupId;

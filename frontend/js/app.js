@@ -1192,13 +1192,18 @@ const App = {
                 ...Voice.settings,
                 inputDevice: settings.inputDevice,
                 outputDevice: settings.outputDevice,
-                inputVolume: settings.micVolume / 100,
-                outputVolume: settings.outputVolume / 100,
+                inputVolume: settings.micVolume,
+                outputVolume: settings.outputVolume,
                 noiseSuppression: settings.noiseSuppression,
                 echoCancellation: settings.echoCancellation,
                 autoGainControl: settings.autoGain
             };
             Voice.saveSettings();
+            
+            // Update gain node if audio processing is active
+            if (Voice.inputGainNode) {
+                Voice.inputGainNode.gain.value = settings.micVolume / 100;
+            }
         }
         
         const btn = Utils.$('#settings-audio-save');
