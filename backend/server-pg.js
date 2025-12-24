@@ -64,6 +64,7 @@ async function initDB() {
                 name VARCHAR(100) NOT NULL,
                 owner_id UUID REFERENCES users(id),
                 icon TEXT,
+                banner TEXT,
                 energy INT DEFAULT 0,
                 created_at TIMESTAMP DEFAULT NOW()
             );
@@ -431,6 +432,54 @@ app.post('/api/servers', authenticate, async (req, res) => {
     }
 });
 
+// Update server settings
+app.patch('/api/servers/:serverId', authenticate, async (req, res) => {
+    try {
+        const { serverId } = req.params;
+        const { name, icon, banner } = req.body;
+        
+        // Check ownership
+        const serverCheck = await pool.query('SELECT * FROM servers WHERE id = $1', [serverId]);
+        if (!serverCheck.rows.length) {
+            return res.status(404).json({ error: true, message: 'Сервер не найден' });
+        }
+        if (serverCheck.rows[0].owner_id !== req.user.id) {
+            return res.status(403).json({ error: true, message: 'Нет прав для редактирования сервера' });
+        }
+        
+        // Build update query
+        const updates = [];
+        const values = [];
+        let paramIndex = 1;
+        
+        if (name) {
+            updates.push(`name = $${paramIndex++}`);
+            values.push(name);
+        }
+        if (icon !== undefined) {
+            updates.push(`icon = $${paramIndex++}`);
+            values.push(icon);
+        }
+        if (banner !== undefined) {
+            updates.push(`banner = $${paramIndex++}`);
+            values.push(banner);
+        }
+        
+        if (updates.length === 0) {
+            return res.status(400).json({ error: true, message: 'Нет данных для обновления' });
+        }
+        
+        values.push(serverId);
+        await pool.query(`UPDATE servers SET ${updates.join(', ')} WHERE id = $${paramIndex}`, values);
+        
+        const result = await pool.query('SELECT * FROM servers WHERE id = $1', [serverId]);
+        res.json({ server: result.rows[0] });
+    } catch (e) {
+        console.error('Server update error:', e);
+        res.status(500).json({ error: true, message: 'Ошибка сервера' });
+    }
+});
+
 app.get('/api/servers/:serverId/members', authenticate, async (req, res) => {
     try {
         const result = await pool.query(`
@@ -497,6 +546,10 @@ app.post('/api/messages/channel/:channelId', authenticate, async (req, res) => {
         const { content } = req.body;
         const messageId = uuidv4();
         
+        // Get channel to find serverId
+        const channelResult = await pool.query('SELECT server_id FROM channels WHERE id = $1', [req.params.channelId]);
+        const serverId = channelResult.rows[0]?.server_id;
+        
         await pool.query(
             'INSERT INTO messages (id, channel_id, author_id, content) VALUES ($1, $2, $3, $4)',
             [messageId, req.params.channelId, req.user.id, content]
@@ -510,7 +563,7 @@ app.post('/api/messages/channel/:channelId', authenticate, async (req, res) => {
             author: { id: req.user.id, username: req.user.username, tag: req.user.tag, avatar: req.user.avatar }
         };
         
-        broadcastToChannel(req.params.channelId, { type: 'message_create', payload: { channelId: req.params.channelId, message } }, req.user.id);
+        broadcastToChannel(req.params.channelId, { type: 'message_create', payload: { channelId: req.params.channelId, serverId, message } }, req.user.id);
         res.status(201).json({ message });
     } catch (e) {
         res.status(500).json({ error: true, message: 'Ошибка сервера' });

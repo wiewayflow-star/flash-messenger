@@ -124,6 +124,14 @@ const WS = {
                         App.renderMessages();
                         App.scrollToBottom();
                     }
+                } else {
+                    // Message in another channel - track as unread for server
+                    if (payload.serverId && window.App) {
+                        // Check if server is muted
+                        if (!App.isServerMuted(payload.serverId)) {
+                            App.addServerUnread(payload.serverId);
+                        }
+                    }
                 }
                 break;
 

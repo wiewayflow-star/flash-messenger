@@ -92,6 +92,13 @@ const API = {
             return API.request(`/servers/${serverId}/members`);
         },
 
+        async update(serverId, data) {
+            return API.request(`/servers/${serverId}`, {
+                method: 'PATCH',
+                body: JSON.stringify(data)
+            });
+        },
+
         async delete(serverId) {
             return API.request(`/servers/${serverId}`, { method: 'DELETE' });
         },

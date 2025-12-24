@@ -221,6 +221,22 @@ const App = {
             if (icon) this.selectServer(icon.dataset.server);
         });
 
+        // Server list right-click (context menu)
+        Utils.$('#server-list').addEventListener('contextmenu', (e) => {
+            const icon = e.target.closest('.server-icon');
+            if (icon) {
+                e.preventDefault();
+                this.showServerContextMenu(e, icon.dataset.server);
+            }
+        });
+
+        // Close context menu on click outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.server-context-menu')) {
+                this.hideServerContextMenu();
+            }
+        });
+
         // Home icon - just show friends view, don't reload sidebar
         Utils.$('.home-icon').addEventListener('click', () => {
             // Only switch to home if not already there
@@ -618,15 +634,21 @@ const App = {
 
     renderServers() {
         const container = Utils.$('#server-list');
-        container.innerHTML = Store.state.servers.map(server => 
-            Components.serverIcon(server, server.id === Store.state.currentServer?.id)
-        ).join('');
+        container.innerHTML = Store.state.servers.map(server => {
+            const isActive = server.id === Store.state.currentServer?.id;
+            const hasUnread = this.serverUnreadMessages[server.id] > 0;
+            const isMuted = this.isServerMuted(server.id);
+            return Components.serverIcon(server, isActive, hasUnread, isMuted);
+        }).join('');
     },
 
     async selectServer(serverId) {
         this.stopFriendsRefresh();
         const server = Store.state.servers.find(s => s.id === serverId);
         if (!server) return;
+
+        // Clear unread messages for this server
+        this.markServerAsRead(serverId);
 
         Store.setCurrentServer(server);
         this.renderServers();
@@ -771,12 +793,6 @@ const App = {
         const voiceChannels = Store.state.channels.filter(c => c.type === 'voice');
 
         container.innerHTML = `
-            <button class="btn btn-primary" style="width: 100%; margin-bottom: 12px;" onclick="App.showServerInvite()">
-                <svg viewBox="0 0 24 24" width="16" height="16" style="margin-right: 6px; vertical-align: middle;">
-                    <path fill="currentColor" d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-                </svg>
-                Пригласить
-            </button>
             <div class="channel-category">
                 <div class="category-header">Текстовые каналы</div>
                 ${textChannels.map(c => Components.channelItem(c, c.id === Store.state.currentChannel?.id)).join('')}
@@ -2911,6 +2927,323 @@ const App = {
         if (content.toLowerCase().includes('@here')) return true;
         
         return false;
+    },
+
+    // ============ SERVER CONTEXT MENU ============
+    
+    contextMenuServerId: null,
+    mutedServers: Utils.storage.get('flash_muted_servers') || {},
+    serverUnreadMessages: {},
+
+    // Show server context menu
+    showServerContextMenu(e, serverId) {
+        const menu = Utils.$('#server-context-menu');
+        const server = Store.state.servers.find(s => s.id === serverId);
+        if (!menu || !server) return;
+
+        this.contextMenuServerId = serverId;
+
+        // Position menu at cursor
+        menu.style.left = e.clientX + 'px';
+        menu.style.top = e.clientY + 'px';
+
+        // Check if menu would go off screen
+        const menuRect = menu.getBoundingClientRect();
+        if (e.clientX + 200 > window.innerWidth) {
+            menu.style.left = (e.clientX - 200) + 'px';
+        }
+        if (e.clientY + 250 > window.innerHeight) {
+            menu.style.top = (e.clientY - 250) + 'px';
+        }
+
+        // Update "Mark as read" button state
+        const markReadBtn = Utils.$('#ctx-mark-read');
+        const hasUnread = this.serverUnreadMessages[serverId] > 0;
+        if (markReadBtn) {
+            markReadBtn.classList.toggle('disabled', !hasUnread);
+        }
+
+        // Show/hide settings button based on ownership
+        const settingsBtn = Utils.$('#ctx-server-settings');
+        if (settingsBtn) {
+            settingsBtn.style.display = server.owner_id === Store.state.user?.id ? '' : 'none';
+        }
+
+        // Show menu
+        menu.classList.add('show');
+
+        // Bind menu item clicks
+        this.bindContextMenuEvents();
+    },
+
+    // Hide server context menu
+    hideServerContextMenu() {
+        const menu = Utils.$('#server-context-menu');
+        if (menu) {
+            menu.classList.remove('show');
+        }
+        this.contextMenuServerId = null;
+    },
+
+    // Bind context menu events
+    bindContextMenuEvents() {
+        const menu = Utils.$('#server-context-menu');
+        if (!menu) return;
+
+        // Mark as read
+        const markReadBtn = menu.querySelector('[data-action="mark-read"]');
+        markReadBtn?.addEventListener('click', () => {
+            if (!markReadBtn.classList.contains('disabled')) {
+                this.markServerAsRead(this.contextMenuServerId);
+            }
+            this.hideServerContextMenu();
+        }, { once: true });
+
+        // Invite
+        const inviteBtn = menu.querySelector('[data-action="invite"]');
+        inviteBtn?.addEventListener('click', () => {
+            this.showServerInviteFromContext(this.contextMenuServerId);
+            this.hideServerContextMenu();
+        }, { once: true });
+
+        // Mute options
+        menu.querySelectorAll('[data-mute]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const duration = btn.dataset.mute;
+                this.muteServer(this.contextMenuServerId, duration);
+                this.hideServerContextMenu();
+            }, { once: true });
+        });
+
+        // Settings
+        const settingsBtn = menu.querySelector('[data-action="settings"]');
+        settingsBtn?.addEventListener('click', () => {
+            this.showServerSettings(this.contextMenuServerId);
+            this.hideServerContextMenu();
+        }, { once: true });
+    },
+
+    // Mark server as read
+    markServerAsRead(serverId) {
+        this.serverUnreadMessages[serverId] = 0;
+        this.updateServerUnreadIndicator(serverId);
+        console.log('[Server] Marked as read:', serverId);
+    },
+
+    // Update server unread indicator
+    updateServerUnreadIndicator(serverId) {
+        const serverIcon = document.querySelector(`.server-icon[data-server="${serverId}"]`);
+        if (serverIcon) {
+            const hasUnread = this.serverUnreadMessages[serverId] > 0;
+            serverIcon.classList.toggle('has-unread', hasUnread);
+        }
+    },
+
+    // Add unread message to server
+    addServerUnread(serverId) {
+        if (!this.serverUnreadMessages[serverId]) {
+            this.serverUnreadMessages[serverId] = 0;
+        }
+        this.serverUnreadMessages[serverId]++;
+        this.updateServerUnreadIndicator(serverId);
+    },
+
+    // Mute server
+    muteServer(serverId, duration) {
+        const server = Store.state.servers.find(s => s.id === serverId);
+        if (!server) return;
+
+        if (duration === 'forever') {
+            this.mutedServers[serverId] = { until: 'forever' };
+        } else {
+            const minutes = parseInt(duration);
+            const until = Date.now() + minutes * 60 * 1000;
+            this.mutedServers[serverId] = { until };
+        }
+
+        Utils.storage.set('flash_muted_servers', this.mutedServers);
+        this.updateServerMutedState(serverId);
+        console.log('[Server] Muted:', serverId, 'for', duration);
+    },
+
+    // Unmute server
+    unmuteServer(serverId) {
+        delete this.mutedServers[serverId];
+        Utils.storage.set('flash_muted_servers', this.mutedServers);
+        this.updateServerMutedState(serverId);
+    },
+
+    // Check if server is muted
+    isServerMuted(serverId) {
+        const mute = this.mutedServers[serverId];
+        if (!mute) return false;
+        if (mute.until === 'forever') return true;
+        if (Date.now() < mute.until) return true;
+        // Mute expired
+        delete this.mutedServers[serverId];
+        Utils.storage.set('flash_muted_servers', this.mutedServers);
+        return false;
+    },
+
+    // Update server muted visual state
+    updateServerMutedState(serverId) {
+        const serverIcon = document.querySelector(`.server-icon[data-server="${serverId}"]`);
+        if (serverIcon) {
+            serverIcon.classList.toggle('muted', this.isServerMuted(serverId));
+        }
+    },
+
+    // Show invite modal from context menu
+    async showServerInviteFromContext(serverId) {
+        try {
+            const { code } = await API.servers.createInvite(serverId);
+            const modal = Utils.$('#invite-modal');
+            const codeDisplay = Utils.$('#invite-code-display');
+            
+            if (codeDisplay) {
+                codeDisplay.value = code;
+            }
+            
+            // Bind copy button
+            const copyBtn = Utils.$('#copy-invite-btn');
+            copyBtn?.addEventListener('click', () => {
+                navigator.clipboard.writeText(code);
+                copyBtn.textContent = 'Скопировано!';
+                setTimeout(() => {
+                    copyBtn.textContent = 'Копировать';
+                }, 2000);
+            }, { once: true });
+            
+            this.showModal('invite-modal');
+        } catch (error) {
+            console.error('Failed to create invite:', error);
+        }
+    },
+
+    // Show server settings modal
+    async showServerSettings(serverId) {
+        const server = Store.state.servers.find(s => s.id === serverId);
+        if (!server) return;
+
+        // Check ownership
+        if (server.owner_id !== Store.state.user?.id) {
+            console.log('[Server] Not owner, cannot edit settings');
+            return;
+        }
+
+        this.editingServerId = serverId;
+
+        // Populate form
+        Utils.$('#server-settings-name').value = server.name;
+
+        // Set avatar
+        const avatarEl = Utils.$('#server-settings-avatar');
+        if (server.icon) {
+            avatarEl.style.backgroundImage = `url(${server.icon})`;
+            avatarEl.textContent = '';
+        } else {
+            avatarEl.style.backgroundImage = '';
+            avatarEl.textContent = server.name.charAt(0).toUpperCase();
+        }
+
+        // Set banner
+        const bannerEl = Utils.$('#server-settings-banner');
+        if (server.banner) {
+            bannerEl.style.backgroundImage = `url(${server.banner})`;
+        } else {
+            bannerEl.style.backgroundImage = '';
+        }
+
+        // Bind form submit
+        const form = Utils.$('#server-settings-form');
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+            await this.saveServerSettings();
+        };
+
+        // Bind avatar click
+        const avatarInput = Utils.$('#server-icon-input');
+        avatarEl.onclick = () => avatarInput.click();
+        avatarInput.onchange = (e) => this.handleServerImageUpload(e.target.files[0], 'icon');
+
+        // Bind banner click
+        const bannerInput = Utils.$('#server-banner-input');
+        bannerEl.onclick = () => bannerInput.click();
+        bannerInput.onchange = (e) => this.handleServerImageUpload(e.target.files[0], 'banner');
+
+        this.showModal('server-settings-modal');
+    },
+
+    // Handle server image upload
+    async handleServerImageUpload(file, type) {
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const dataUrl = e.target.result;
+            
+            if (type === 'icon') {
+                const avatarEl = Utils.$('#server-settings-avatar');
+                avatarEl.style.backgroundImage = `url(${dataUrl})`;
+                avatarEl.textContent = '';
+                this.pendingServerIcon = dataUrl;
+            } else if (type === 'banner') {
+                const bannerEl = Utils.$('#server-settings-banner');
+                bannerEl.style.backgroundImage = `url(${dataUrl})`;
+                this.pendingServerBanner = dataUrl;
+            }
+        };
+        reader.readAsDataURL(file);
+    },
+
+    // Save server settings
+    async saveServerSettings() {
+        const serverId = this.editingServerId;
+        if (!serverId) return;
+
+        const name = Utils.$('#server-settings-name').value.trim();
+        if (!name || name.length < 2) {
+            alert('Название сервера должно быть не менее 2 символов');
+            return;
+        }
+
+        try {
+            const updateData = { name };
+            
+            if (this.pendingServerIcon) {
+                updateData.icon = this.pendingServerIcon;
+            }
+            if (this.pendingServerBanner) {
+                updateData.banner = this.pendingServerBanner;
+            }
+
+            const { server } = await API.servers.update(serverId, updateData);
+            
+            // Update local state
+            const index = Store.state.servers.findIndex(s => s.id === serverId);
+            if (index !== -1) {
+                Store.state.servers[index] = { ...Store.state.servers[index], ...server };
+            }
+            
+            // Update current server if it's the one being edited
+            if (Store.state.currentServer?.id === serverId) {
+                Store.state.currentServer = { ...Store.state.currentServer, ...server };
+                Utils.$('#server-name').textContent = server.name;
+            }
+
+            this.renderServers();
+            this.hideModal('server-settings-modal');
+            
+            // Clear pending images
+            this.pendingServerIcon = null;
+            this.pendingServerBanner = null;
+            this.editingServerId = null;
+            
+            console.log('[Server] Settings saved:', serverId);
+        } catch (error) {
+            console.error('Failed to save server settings:', error);
+            alert('Не удалось сохранить настройки сервера');
+        }
     }
 };
 

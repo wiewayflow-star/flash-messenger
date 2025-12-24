@@ -3,10 +3,15 @@
  */
 const Components = {
     // Server icon
-    serverIcon(server, isActive = false) {
+    serverIcon(server, isActive = false, hasUnread = false, isMuted = false) {
         const initial = Utils.getInitials(server.name);
+        const classes = ['server-icon'];
+        if (isActive) classes.push('active');
+        if (hasUnread) classes.push('has-unread');
+        if (isMuted) classes.push('muted');
+        
         return `
-            <div class="server-icon ${isActive ? 'active' : ''}" data-server="${server.id}" title="${Utils.escapeHtml(server.name)}">
+            <div class="${classes.join(' ')}" data-server="${server.id}" title="${Utils.escapeHtml(server.name)}">
                 ${server.icon 
                     ? `<img src="${server.icon}" alt="${Utils.escapeHtml(server.name)}">`
                     : `<span class="server-initial">${initial}</span>`
