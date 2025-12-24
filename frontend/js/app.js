@@ -1252,6 +1252,21 @@ const App = {
             autoGain: Utils.$('#settings-auto-gain')?.checked ?? true
         };
         
+        // Check if settings changed
+        const savedSettings = Utils.storage.get('flash_audio_settings') || {};
+        const hasChanges = 
+            settings.inputDevice !== (savedSettings.inputDevice || '') ||
+            settings.outputDevice !== (savedSettings.outputDevice || '') ||
+            settings.micVolume !== (savedSettings.micVolume ?? 100) ||
+            settings.outputVolume !== (savedSettings.outputVolume ?? 100) ||
+            settings.noiseSuppression !== (savedSettings.noiseSuppression ?? true) ||
+            settings.echoCancellation !== (savedSettings.echoCancellation ?? true) ||
+            settings.autoGain !== (savedSettings.autoGain ?? true);
+        
+        if (!hasChanges) {
+            return; // Nothing changed, don't show success
+        }
+        
         Utils.storage.set('flash_audio_settings', settings);
         
         if (window.Voice) {
