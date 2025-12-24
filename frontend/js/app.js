@@ -70,9 +70,9 @@ const App = {
         
         if (iconEl) {
             if (iconUrl) {
-                iconEl.innerHTML = `<img src="${iconUrl}" alt="" style="width: 16px; height: 16px; object-fit: contain;">`;
+                iconEl.innerHTML = `<img src="${iconUrl}" alt="" style="width: 16px; height: 16px;">`;
             } else {
-                iconEl.innerHTML = '<img src="assets/logo.png" alt="Flash" width="16" height="16" style="object-fit: contain;">';
+                iconEl.innerHTML = '<img src="assets/logo-white.svg" alt="Flash" width="16" height="16">';
             }
         }
     },
