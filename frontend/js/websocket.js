@@ -545,7 +545,7 @@ const WS = {
         if ('Notification' in window && Notification.permission === 'granted') {
             new Notification('Новый запрос в друзья', {
                 body: message,
-                icon: user.avatar || '/assets/favicon.svg',
+                icon: user.avatar || '/assets/logo.png',
                 tag: 'friend-request-' + request.id
             });
         }
