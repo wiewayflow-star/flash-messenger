@@ -1619,16 +1619,77 @@ const Voice = {
     startMicTest() {
         // Store test stream and audio context for cleanup
         this.testStream = null;
+        this.testRawStream = null;
         this.testAudioContext = null;
         this.loopbackAudio = null;
 
-        navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
-            this.testStream = stream;
-            this.testAudioContext = new (window.AudioContext || window.webkitAudioContext)();
-            const source = this.testAudioContext.createMediaStreamSource(stream);
+        // Get audio settings
+        const audioSettings = Utils.storage.get('flash_audio_settings') || {};
+        const noiseSuppression = audioSettings.noiseSuppression ?? true;
+        const echoCancellation = audioSettings.echoCancellation ?? true;
+        const autoGain = audioSettings.autoGain ?? true;
+        const micVolume = audioSettings.micVolume || 100;
+
+        navigator.mediaDevices.getUserMedia({ 
+            audio: {
+                noiseSuppression: noiseSuppression,
+                echoCancellation: echoCancellation,
+                autoGainControl: autoGain,
+                sampleRate: 48000,
+                sampleSize: 16,
+                channelCount: 1
+            } 
+        }).then(async rawStream => {
+            this.testRawStream = rawStream;
+            this.testAudioContext = new (window.AudioContext || window.webkitAudioContext)({
+                sampleRate: 48000
+            });
+            
+            const source = this.testAudioContext.createMediaStreamSource(rawStream);
+            
+            // Create processing chain (same as in calls)
+            // High-pass filter to remove low frequency rumble
+            const highpass = this.testAudioContext.createBiquadFilter();
+            highpass.type = 'highpass';
+            highpass.frequency.value = 80;
+            highpass.Q.value = 0.7;
+            
+            // Low-pass filter to remove high frequency hiss
+            const lowpass = this.testAudioContext.createBiquadFilter();
+            lowpass.type = 'lowpass';
+            lowpass.frequency.value = 12000;
+            lowpass.Q.value = 0.7;
+            
+            // Compressor for dynamic range control
+            const compressor = this.testAudioContext.createDynamicsCompressor();
+            compressor.threshold.value = -24;
+            compressor.knee.value = 12;
+            compressor.ratio.value = 4;
+            compressor.attack.value = 0.003;
+            compressor.release.value = 0.25;
+            
+            // Gain node for volume
+            const gainNode = this.testAudioContext.createGain();
+            gainNode.gain.value = micVolume / 100;
+            this.testGainNode = gainNode;
+            
+            // Create destination for processed stream
+            const destination = this.testAudioContext.createMediaStreamDestination();
+            
+            // Connect chain: source -> highpass -> lowpass -> compressor -> gain -> destination
+            source.connect(highpass);
+            highpass.connect(lowpass);
+            lowpass.connect(compressor);
+            compressor.connect(gainNode);
+            gainNode.connect(destination);
+            
+            // Use processed stream for loopback
+            this.testStream = destination.stream;
+            
+            // Analyser for meter (connected after gain)
             const analyser = this.testAudioContext.createAnalyser();
             analyser.fftSize = 256;
-            source.connect(analyser);
+            gainNode.connect(analyser);
 
             // Store for loopback
             this.testSource = source;
@@ -1640,9 +1701,17 @@ const Voice = {
             const updateMeter = () => {
                 if (!document.getElementById('voice-settings-modal')) {
                     // Cleanup when modal closes
+                    if (this.testRawStream) {
+                        this.testRawStream.getTracks().forEach(t => t.stop());
+                        this.testRawStream = null;
+                    }
                     if (this.testStream) {
                         this.testStream.getTracks().forEach(t => t.stop());
                         this.testStream = null;
+                    }
+                    if (this.testAudioContext) {
+                        try { this.testAudioContext.close(); } catch(e) {}
+                        this.testAudioContext = null;
                     }
                     if (this.loopbackAudio) {
                         this.loopbackAudio.srcObject = null;

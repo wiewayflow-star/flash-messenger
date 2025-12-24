@@ -1124,8 +1124,17 @@ const App = {
         const meterFill = Utils.$('#settings-mic-meter-fill');
         
         if (this.audioTestStream) {
+            // Stop test
+            if (this.audioTestRawStream) {
+                this.audioTestRawStream.getTracks().forEach(t => t.stop());
+                this.audioTestRawStream = null;
+            }
             this.audioTestStream.getTracks().forEach(t => t.stop());
             this.audioTestStream = null;
+            if (this.audioTestContext) {
+                try { this.audioTestContext.close(); } catch(e) {}
+                this.audioTestContext = null;
+            }
             if (this.audioMeterInterval) {
                 clearInterval(this.audioMeterInterval);
                 this.audioMeterInterval = null;
@@ -1139,12 +1148,21 @@ const App = {
         
         try {
             const deviceId = Utils.$('#settings-audio-input')?.value;
-            this.audioTestStream = await navigator.mediaDevices.getUserMedia({
+            const noiseSuppression = Utils.$('#settings-noise-suppression')?.checked ?? true;
+            const echoCancellation = Utils.$('#settings-echo-cancellation')?.checked ?? true;
+            const autoGain = Utils.$('#settings-auto-gain')?.checked ?? true;
+            const micVolume = parseInt(Utils.$('#settings-mic-volume')?.value) || 100;
+            
+            // Get raw stream
+            this.audioTestRawStream = await navigator.mediaDevices.getUserMedia({
                 audio: {
                     deviceId: deviceId ? { exact: deviceId } : undefined,
-                    noiseSuppression: Utils.$('#settings-noise-suppression')?.checked ?? true,
-                    echoCancellation: Utils.$('#settings-echo-cancellation')?.checked ?? true,
-                    autoGainControl: Utils.$('#settings-auto-gain')?.checked ?? true
+                    noiseSuppression: noiseSuppression,
+                    echoCancellation: echoCancellation,
+                    autoGainControl: autoGain,
+                    sampleRate: 48000,
+                    sampleSize: 16,
+                    channelCount: 1
                 }
             });
             
@@ -1152,11 +1170,54 @@ const App = {
             btn.classList.remove('btn-secondary');
             btn.classList.add('btn-danger');
             
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            const source = audioContext.createMediaStreamSource(this.audioTestStream);
-            this.audioAnalyser = audioContext.createAnalyser();
+            // Create audio processing chain (same as in calls)
+            this.audioTestContext = new (window.AudioContext || window.webkitAudioContext)({
+                sampleRate: 48000
+            });
+            const source = this.audioTestContext.createMediaStreamSource(this.audioTestRawStream);
+            
+            // High-pass filter to remove low frequency rumble
+            const highpass = this.audioTestContext.createBiquadFilter();
+            highpass.type = 'highpass';
+            highpass.frequency.value = 80;
+            highpass.Q.value = 0.7;
+            
+            // Low-pass filter to remove high frequency hiss
+            const lowpass = this.audioTestContext.createBiquadFilter();
+            lowpass.type = 'lowpass';
+            lowpass.frequency.value = 12000;
+            lowpass.Q.value = 0.7;
+            
+            // Compressor for dynamic range control
+            const compressor = this.audioTestContext.createDynamicsCompressor();
+            compressor.threshold.value = -24;
+            compressor.knee.value = 12;
+            compressor.ratio.value = 4;
+            compressor.attack.value = 0.003;
+            compressor.release.value = 0.25;
+            
+            // Gain node for volume
+            const gainNode = this.audioTestContext.createGain();
+            gainNode.gain.value = micVolume / 100;
+            this.audioTestGainNode = gainNode;
+            
+            // Create destination for processed stream
+            const destination = this.audioTestContext.createMediaStreamDestination();
+            
+            // Connect chain: source -> highpass -> lowpass -> compressor -> gain -> destination
+            source.connect(highpass);
+            highpass.connect(lowpass);
+            lowpass.connect(compressor);
+            compressor.connect(gainNode);
+            gainNode.connect(destination);
+            
+            // Store processed stream
+            this.audioTestStream = destination.stream;
+            
+            // Analyser for meter (connected after gain)
+            this.audioAnalyser = this.audioTestContext.createAnalyser();
             this.audioAnalyser.fftSize = 256;
-            source.connect(this.audioAnalyser);
+            gainNode.connect(this.audioAnalyser);
             
             const dataArray = new Uint8Array(this.audioAnalyser.frequencyBinCount);
             
@@ -1164,8 +1225,14 @@ const App = {
                 if (!this.audioAnalyser) return;
                 this.audioAnalyser.getByteFrequencyData(dataArray);
                 const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
-                const volume = Math.min(100, (avg / 128) * 100 * (Utils.$('#settings-mic-volume')?.value / 100 || 1));
+                const volume = Math.min(100, (avg / 128) * 100);
                 meterFill.style.width = volume + '%';
+                
+                // Update gain in real-time
+                const currentVolume = parseInt(Utils.$('#settings-mic-volume')?.value) || 100;
+                if (this.audioTestGainNode) {
+                    this.audioTestGainNode.gain.value = currentVolume / 100;
+                }
             }, 50);
             
         } catch (e) {
