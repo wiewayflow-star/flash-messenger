@@ -384,16 +384,25 @@
                             <div class="settings-divider"></div>
                             <h4>Обработка голоса</h4>
                             <div class="setting-item">
-                                <label>Шумоподавление</label>
-                                <input type="checkbox" id="settings-noise-suppression" checked>
+                                <label for="settings-noise-suppression">Шумоподавление</label>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="settings-noise-suppression" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
                             </div>
                             <div class="setting-item">
-                                <label>Эхоподавление</label>
-                                <input type="checkbox" id="settings-echo-cancellation" checked>
+                                <label for="settings-echo-cancellation">Эхоподавление</label>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="settings-echo-cancellation" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
                             </div>
                             <div class="setting-item">
-                                <label>Автоматическая регулировка громкости</label>
-                                <input type="checkbox" id="settings-auto-gain" checked>
+                                <label for="settings-auto-gain">Автоматическая регулировка громкости</label>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="settings-auto-gain" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
                             </div>
                             <button class="btn btn-primary" id="settings-audio-save">Сохранить настройки</button>
                         </div>
@@ -401,16 +410,25 @@
                     <div class="settings-section" data-section="appearance">
                         <h3>Внешний вид</h3>
                         <div class="setting-item">
-                            <label>Анимации</label>
-                            <input type="checkbox" id="setting-animations" checked>
+                            <label for="setting-animations">Анимации</label>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="setting-animations" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
                         </div>
                         <div class="setting-item">
-                            <label>Glow эффекты</label>
-                            <input type="checkbox" id="setting-glow" checked>
+                            <label for="setting-glow">Glow эффекты</label>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="setting-glow" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
                         </div>
                         <div class="setting-item">
-                            <label>Динамический фон</label>
-                            <input type="checkbox" id="setting-dynamic-bg" checked>
+                            <label for="setting-dynamic-bg">Динамический фон</label>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="setting-dynamic-bg" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
                         </div>
                     </div>
                     <div class="settings-section" data-section="flash-mode">
