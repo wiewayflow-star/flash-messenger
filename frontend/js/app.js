@@ -1044,7 +1044,18 @@ const App = {
     // Members
     renderMembers() {
         const container = Utils.$('#members-list');
-        container.innerHTML = Store.state.members.map(m => Components.memberItem(m)).join('');
+        const currentUserId = Store.state.user?.id;
+        const currentUserStatus = Store.state.user?.status || 'online';
+        
+        // Update current user's status in members list
+        const membersWithCorrectStatus = Store.state.members.map(m => {
+            if (m.id === currentUserId) {
+                return { ...m, status: currentUserStatus };
+            }
+            return m;
+        });
+        
+        container.innerHTML = membersWithCorrectStatus.map(m => Components.memberItem(m)).join('');
     },
 
     // Create server
