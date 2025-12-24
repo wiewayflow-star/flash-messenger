@@ -679,8 +679,12 @@
     padding: 2px 16px;
     border-radius: var(--border-radius);
     position: relative;
-    animation: fadeInUp 0.25s ease;
     transition: background 0.15s ease;
+}
+
+/* Only animate new messages appended in real-time */
+.message.new-message {
+    animation: fadeInUp 0.2s ease;
 }
 
 .message:hover {

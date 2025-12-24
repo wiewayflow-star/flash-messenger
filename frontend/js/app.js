@@ -969,6 +969,32 @@ const App = {
         }).join('');
     },
 
+    // Append single message without re-rendering entire list (for real-time updates)
+    appendMessage(message) {
+        const container = Utils.$('#messages-list');
+        if (!container) return;
+
+        const messages = Store.state.messages;
+        const prevMsg = messages.length > 1 ? messages[messages.length - 2] : null;
+        const isGrouped = Utils.shouldGroupMessages(prevMsg, message);
+        
+        // Use decrypted content if available
+        const displayMsg = { ...message, content: message.decryptedContent || message.content };
+        let messageHtml = Components.message(displayMsg, isGrouped);
+        
+        // Add new-message class for animation
+        messageHtml = messageHtml.replace('class="message', 'class="message new-message');
+        
+        // Append to container
+        container.insertAdjacentHTML('beforeend', messageHtml);
+        
+        // Remove animation class after animation completes
+        setTimeout(() => {
+            const lastMsg = container.lastElementChild;
+            if (lastMsg) lastMsg.classList.remove('new-message');
+        }, 250);
+    },
+
     // Check if content looks like encrypted data
     isEncryptedContent(content) {
         if (!content || content.length < 20) return false;

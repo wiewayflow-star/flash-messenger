@@ -121,7 +121,8 @@ const WS = {
                 if (Store.state.currentChannel?.id === payload.channelId) {
                     Store.addMessage(payload.message);
                     if (window.App) {
-                        App.renderMessages();
+                        // Append message without re-rendering entire list
+                        App.appendMessage(payload.message);
                         // Check if user is scrolled up
                         if (App.isUserScrolledUp) {
                             App.addNewMessageWhileScrolledUp(payload.message);
@@ -147,7 +148,8 @@ const WS = {
                     // User is in this DM chat - add message and render
                     Store.addMessage(payload.message);
                     if (window.App) {
-                        App.renderMessages();
+                        // Append message without re-rendering entire list
+                        App.appendMessage(payload.message);
                         // Check if user is scrolled up
                         if (App.isUserScrolledUp) {
                             App.addNewMessageWhileScrolledUp(payload.message);
