@@ -804,11 +804,11 @@
     bottom: 0;
     left: 0;
     right: 0;
-    height: 6px;
+    height: 12px;
     cursor: ns-resize;
     background: transparent;
     transition: background 0.15s ease;
-    z-index: 10;
+    z-index: 200;
 }
 
 .embedded-call-resize-handle:hover,
@@ -1557,23 +1557,26 @@
 
 .embedded-call-controls-bar {
     position: absolute;
-    bottom: 0;
+    bottom: 12px;
     left: 0;
     right: 0;
     transition: transform 0.3s ease, opacity 0.3s ease;
     transform: translateY(0);
     opacity: 1;
     z-index: 100;
+    pointer-events: none;
+}
+
+.embedded-call-controls-bar > * {
+    pointer-events: auto;
 }
 
 .embedded-call-controls-bar.hidden {
     transform: translateY(100%);
     opacity: 0;
-    pointer-events: none;
 }
 
 .embedded-call-controls-bar.visible {
     transform: translateY(0) !important;
     opacity: 1 !important;
-    pointer-events: auto !important;
 }

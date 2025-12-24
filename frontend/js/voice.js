@@ -901,7 +901,13 @@ const Voice = {
         const callContainer = document.getElementById('embedded-call');
         if (!callContainer) return;
         
+        // Save current height before adding screen share class
+        const currentHeight = callContainer.style.height || callContainer.offsetHeight + 'px';
+        
         callContainer.classList.add('has-screen-share');
+        
+        // Restore height after adding class (prevent size reset)
+        callContainer.style.height = currentHeight;
         
         const videoContainer = document.createElement('div');
         videoContainer.className = 'screen-share-container';
@@ -2227,7 +2233,10 @@ const Voice = {
         const container = document.createElement('div');
         container.className = 'embedded-call-container';
         container.id = 'embedded-call';
-        container.style.height = '280px'; // Default height
+        
+        // Use saved height from localStorage or default
+        const savedHeight = localStorage.getItem('flash_call_height');
+        container.style.height = (savedHeight ? parseInt(savedHeight) : 280) + 'px';
         
         const participants = [
             { id: Store.state.user?.id, username: Store.state.user?.username, avatar: Store.state.user?.avatar, isMe: true },
@@ -2426,6 +2435,15 @@ const Voice = {
         const minHeight = 200; // Minimum height to fit avatars and buttons
         const maxHeight = window.innerHeight * 0.7;
 
+        // Restore saved height from localStorage
+        const savedHeight = localStorage.getItem('flash_call_height');
+        if (savedHeight) {
+            const height = parseInt(savedHeight);
+            if (height >= minHeight && height <= window.innerHeight * 0.8) {
+                container.style.height = height + 'px';
+            }
+        }
+
         const onMouseDown = (e) => {
             if (container.classList.contains('fullscreen')) return;
             
@@ -2443,7 +2461,7 @@ const Voice = {
             if (!isResizing) return;
             
             const deltaY = e.clientY - startY;
-            const newHeight = Math.max(60, Math.min(startHeight + deltaY, window.innerHeight * 0.8));
+            const newHeight = Math.max(minHeight, Math.min(startHeight + deltaY, window.innerHeight * 0.8));
             container.style.height = newHeight + 'px';
         };
 
@@ -2455,8 +2473,10 @@ const Voice = {
             document.body.style.cursor = '';
             document.body.style.userSelect = '';
             
-            // Save height preference
-            this.savedCallHeight = container.offsetHeight;
+            // Save height preference to localStorage
+            const currentHeight = container.offsetHeight;
+            localStorage.setItem('flash_call_height', currentHeight.toString());
+            this.savedCallHeight = currentHeight;
         };
 
         handle.addEventListener('mousedown', onMouseDown);
@@ -2659,7 +2679,10 @@ const Voice = {
         const container = document.createElement('div');
         container.className = 'embedded-call-container';
         container.id = 'embedded-call';
-        container.style.height = (this.savedCallHeight || 200) + 'px';
+        
+        // Use saved height from localStorage or default
+        const savedHeight = localStorage.getItem('flash_call_height');
+        container.style.height = (savedHeight ? parseInt(savedHeight) : 280) + 'px';
         
         container.innerHTML = `
             <div class="embedded-call-header">
