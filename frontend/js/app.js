@@ -619,6 +619,11 @@ const App = {
         // Update titlebar with server name and icon
         this.updateTitlebar(server.name, server.icon || null);
 
+        // Show skeleton loading immediately
+        this.showChannelsSkeleton();
+        this.showMembersSkeleton();
+        this.showMessagesSkeleton();
+
         // Load channels
         try {
             const { channels } = await API.channels.list(serverId);
@@ -650,6 +655,44 @@ const App = {
         } catch (error) {
             console.error('Failed to load server data:', error);
         }
+    },
+
+    // Show skeleton loading for channels
+    showChannelsSkeleton() {
+        const container = Utils.$('#channel-list');
+        if (!container) return;
+        container.innerHTML = `
+            <div class="skeleton-channel"><div class="skeleton skeleton-channel-icon"></div><div class="skeleton skeleton-channel-name" style="width: 70%"></div></div>
+            <div class="skeleton-channel"><div class="skeleton skeleton-channel-icon"></div><div class="skeleton skeleton-channel-name" style="width: 85%"></div></div>
+            <div class="skeleton-channel"><div class="skeleton skeleton-channel-icon"></div><div class="skeleton skeleton-channel-name" style="width: 60%"></div></div>
+            <div class="skeleton-channel"><div class="skeleton skeleton-channel-icon"></div><div class="skeleton skeleton-channel-name" style="width: 75%"></div></div>
+        `;
+    },
+
+    // Show skeleton loading for members
+    showMembersSkeleton() {
+        const container = Utils.$('#members-list');
+        if (!container) return;
+        container.innerHTML = `
+            <div class="skeleton-member"><div class="skeleton skeleton-member-avatar"></div><div class="skeleton skeleton-member-name" style="width: 90px"></div></div>
+            <div class="skeleton-member"><div class="skeleton skeleton-member-avatar"></div><div class="skeleton skeleton-member-name" style="width: 70px"></div></div>
+            <div class="skeleton-member"><div class="skeleton skeleton-member-avatar"></div><div class="skeleton skeleton-member-name" style="width: 100px"></div></div>
+            <div class="skeleton-member"><div class="skeleton skeleton-member-avatar"></div><div class="skeleton skeleton-member-name" style="width: 80px"></div></div>
+            <div class="skeleton-member"><div class="skeleton skeleton-member-avatar"></div><div class="skeleton skeleton-member-name" style="width: 95px"></div></div>
+        `;
+    },
+
+    // Show skeleton loading for messages
+    showMessagesSkeleton() {
+        this.restoreChatStructure();
+        const container = Utils.$('#messages-list');
+        if (!container) return;
+        container.innerHTML = `
+            <div class="skeleton-message"><div class="skeleton skeleton-avatar"></div><div class="skeleton-content"><div class="skeleton skeleton-name"></div><div class="skeleton skeleton-text"></div><div class="skeleton skeleton-text"></div></div></div>
+            <div class="skeleton-message"><div class="skeleton skeleton-avatar"></div><div class="skeleton-content"><div class="skeleton skeleton-name" style="width: 90px"></div><div class="skeleton skeleton-text" style="width: 80%"></div></div></div>
+            <div class="skeleton-message"><div class="skeleton skeleton-avatar"></div><div class="skeleton-content"><div class="skeleton skeleton-name" style="width: 140px"></div><div class="skeleton skeleton-text" style="width: 95%"></div><div class="skeleton skeleton-text" style="width: 60%"></div></div></div>
+            <div class="skeleton-message"><div class="skeleton skeleton-avatar"></div><div class="skeleton-content"><div class="skeleton skeleton-name" style="width: 100px"></div><div class="skeleton skeleton-text" style="width: 75%"></div></div></div>
+        `;
     },
 
     renderChannels() {
@@ -745,6 +788,9 @@ const App = {
         
         // Show message input
         Utils.$('.message-input-container')?.style.setProperty('display', '');
+
+        // Show skeleton loading for messages
+        this.showMessagesSkeleton();
 
         // Subscribe to new channel
         WS.subscribe(channelId);
@@ -2135,6 +2181,9 @@ const App = {
             
             console.log('[DM] Current DM set to:', Store.state.currentDM);
             console.log('[DM] Store.state.currentDM.id:', Store.state.currentDM?.id);
+            
+            // Show skeleton loading for messages
+            this.showMessagesSkeleton();
             
             // Load messages
             const { messages } = await API.dm.getMessages(dmChannel.id);
