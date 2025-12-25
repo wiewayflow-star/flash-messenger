@@ -358,10 +358,7 @@
 
 /* Server tooltip */
 .server-icon .server-tooltip {
-    position: absolute;
-    left: calc(100% + 16px);
-    top: 50%;
-    transform: translateY(-50%);
+    position: fixed;
     background: #111214;
     color: #fff;
     padding: 10px 14px;
@@ -373,11 +370,8 @@
     opacity: 0;
     visibility: hidden;
     transition: opacity 0.1s ease, visibility 0.1s ease;
-    z-index: 10000;
+    z-index: 99999;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-    width: max-content;
-    height: auto;
-    display: block;
 }
 
 .server-icon .server-tooltip::before {

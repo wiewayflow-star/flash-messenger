@@ -215,6 +215,20 @@ const App = {
     },
 
     bindEvents() {
+        // Server tooltip positioning
+        document.addEventListener('mouseenter', (e) => {
+            const icon = e.target.closest('.server-icon');
+            if (icon) {
+                const tooltip = icon.querySelector('.server-tooltip');
+                if (tooltip) {
+                    const rect = icon.getBoundingClientRect();
+                    tooltip.style.left = (rect.right + 12) + 'px';
+                    tooltip.style.top = (rect.top + rect.height / 2) + 'px';
+                    tooltip.style.transform = 'translateY(-50%)';
+                }
+            }
+        }, true);
+
         // Server list clicks
         Utils.$('#server-list').addEventListener('click', (e) => {
             const icon = e.target.closest('.server-icon');
