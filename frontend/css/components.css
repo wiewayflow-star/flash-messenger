@@ -2246,14 +2246,14 @@
 }
 
 .user-mini-profile {
-    position: absolute;
-    bottom: calc(100% + 8px);
-    left: 8px;
+    position: fixed;
+    bottom: 60px;
+    left: 78px;
     width: 300px;
     background: var(--bg-primary);
     border-radius: 8px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-    z-index: 10000;
+    z-index: 99999;
     display: none;
     overflow: hidden;
     animation: miniProfileSlideUp 0.2s ease;
