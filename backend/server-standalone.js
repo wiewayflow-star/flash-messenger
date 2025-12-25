@@ -2087,6 +2087,7 @@ app.post('/api/admin/dm/:userId', authenticate, adminOnly, (req, res) => {
 
 // Check if current user is admin
 app.get('/api/admin/check', authenticate, (req, res) => {
+    console.log(`[Admin Check] User: ${req.user.username}, Tag: ${req.user.tag}, IsAdmin: ${isAdmin(req.user)}`);
     res.json({ isAdmin: isAdmin(req.user) });
 });
 
