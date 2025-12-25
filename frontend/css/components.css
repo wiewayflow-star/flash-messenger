@@ -418,14 +418,13 @@
     background: transparent;
     border: 2px dashed var(--bg-tertiary);
     color: var(--success);
-    transition: all 0.25s ease;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
 .add-server:hover {
     background: var(--success);
     border-color: var(--success);
     color: white;
-    transform: translateY(-3px) rotate(90deg);
 }
 
 
