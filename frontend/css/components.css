@@ -533,21 +533,23 @@
 
 .tooltip-bubble {
     position: absolute;
-    bottom: calc(100% + 8px);
+    bottom: calc(100% + 12px);
     left: 50%;
-    transform: translateX(-50%) scale(0.9);
-    background: #18191c;
-    color: #dcddde;
-    padding: 8px 12px;
-    border-radius: 5px;
-    font-size: 14px;
+    transform: translateX(-50%);
+    background: #111214;
+    color: #e0e1e5;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 15px;
     font-weight: 600;
     white-space: nowrap;
     pointer-events: none;
     opacity: 0;
-    transition: opacity 0.1s ease, transform 0.1s ease;
+    visibility: hidden;
+    transition: opacity 0.15s ease, visibility 0.15s ease;
     z-index: 10000;
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.24);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    letter-spacing: 0.2px;
 }
 
 .tooltip-bubble::after {
@@ -556,13 +558,13 @@
     top: 100%;
     left: 50%;
     transform: translateX(-50%);
-    border: 6px solid transparent;
-    border-top-color: #18191c;
+    border: 8px solid transparent;
+    border-top-color: #111214;
 }
 
 .icon-btn.has-tooltip:hover .tooltip-bubble {
     opacity: 1;
-    transform: translateX(-50%) scale(1);
+    visibility: visible;
 }
 
 .icon-btn {
