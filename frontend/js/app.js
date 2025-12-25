@@ -459,6 +459,12 @@ const App = {
             const rect = e.target.getBoundingClientRect();
             picker.style.bottom = (window.innerHeight - rect.top + 10) + 'px';
             picker.style.right = (window.innerWidth - rect.right) + 'px';
+            
+            // Load GIF categories when picker opens
+            if (picker.classList.contains('show') && !this.gifCategoriesLoaded) {
+                this.loadGifCategories();
+                this.gifCategoriesLoaded = true;
+            }
         });
 
         // Picker tabs
@@ -470,6 +476,19 @@ const App = {
                 const tabName = tab.dataset.tab;
                 Utils.$$('.picker-content').forEach(c => c.style.display = 'none');
                 Utils.$(`#picker-${tabName}`).style.display = 'block';
+                
+                // Load categories when switching to GIFs tab
+                if (tabName === 'gifs' && !this.gifCategoriesLoaded) {
+                    this.loadGifCategories();
+                    this.gifCategoriesLoaded = true;
+                }
+                
+                // Reset to categories view when switching to GIFs
+                if (tabName === 'gifs') {
+                    Utils.$('#gif-categories').style.display = 'grid';
+                    Utils.$('#gif-results').style.display = 'none';
+                    Utils.$('#gif-search').value = '';
+                }
             });
         });
 
@@ -1922,6 +1941,87 @@ const App = {
         Utils.$('#user-search-input')?.focus();
     },
 
+    // GIF categories that rotate daily
+    gifCategories: [
+        ['смешно', 'грустно', 'танец', 'любовь', 'злой', 'шок'],
+        ['привет', 'пока', 'спасибо', 'да', 'нет', 'думаю'],
+        ['кот', 'собака', 'аниме', 'мем', 'реакция', 'праздник'],
+        ['счастье', 'плачу', 'обнимашки', 'поцелуй', 'победа', 'провал'],
+        ['нервный', 'милый', 'страшно', 'круто', 'скучно', 'сон'],
+        ['еда', 'кофе', 'работа', 'отдых', 'спорт', 'музыка'],
+        ['удивление', 'смущение', 'гнев', 'радость', 'грусть', 'страх']
+    ],
+
+    // Load GIF categories with previews
+    async loadGifCategories() {
+        const container = Utils.$('#gif-categories');
+        if (!container) return;
+        
+        // Get today's categories based on day of year
+        const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0)) / 86400000);
+        const categorySet = this.gifCategories[dayOfYear % this.gifCategories.length];
+        
+        // Build categories HTML
+        let html = `
+            <div class="gif-category" data-search="">
+                <div class="gif-category-bg favorites"></div>
+                <span>⭐ Избранное</span>
+            </div>
+            <div class="gif-category" data-search="trending">
+                <div class="gif-category-bg trending"></div>
+                <span>📈 Популярные</span>
+            </div>
+        `;
+        
+        // Add dynamic categories
+        categorySet.forEach(cat => {
+            html += `
+                <div class="gif-category" data-search="${cat}">
+                    <div class="gif-category-bg" data-category="${cat}"></div>
+                    <span>${cat}</span>
+                </div>
+            `;
+        });
+        
+        container.innerHTML = html;
+        
+        // Bind click events
+        container.querySelectorAll('.gif-category').forEach(cat => {
+            cat.addEventListener('click', () => {
+                const search = cat.dataset.search;
+                if (search === '') return;
+                Utils.$('#gif-search').value = search === 'trending' ? '' : search;
+                this.searchGifs(search === 'trending' ? '' : search);
+            });
+        });
+        
+        // Load preview GIFs for each category
+        this.loadCategoryPreviews(categorySet);
+    },
+
+    // Load preview GIFs for categories
+    async loadCategoryPreviews(categories) {
+        const apiKey = 'AIzaSyAyimkuYQYF_FXVALexPuGQctUWRURdCYQ';
+        
+        for (const cat of categories) {
+            try {
+                const url = `https://tenor.googleapis.com/v2/search?q=${encodeURIComponent(cat)}&key=${apiKey}&limit=1&locale=ru_RU`;
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.results && data.results[0]) {
+                    const gifUrl = data.results[0].media_formats.tinygif?.url || data.results[0].media_formats.gif?.url;
+                    const bgEl = document.querySelector(`.gif-category-bg[data-category="${cat}"]`);
+                    if (bgEl && gifUrl) {
+                        bgEl.style.backgroundImage = `url(${gifUrl})`;
+                    }
+                }
+            } catch (e) {
+                console.log('Failed to load preview for:', cat);
+            }
+        }
+    },
+
     // Search GIFs from Tenor
     async searchGifs(query) {
         const resultsEl = Utils.$('#gif-results');
@@ -1932,8 +2032,7 @@ const App = {
         resultsEl.innerHTML = '<div class="gif-loading">Загрузка...</div>';
         
         try {
-            // Tenor API (free tier)
-            const apiKey = 'AIzaSyAyimkuYQYF_FXVALexPuGQctUWRURdCYQ'; // Google's public Tenor API key
+            const apiKey = 'AIzaSyAyimkuYQYF_FXVALexPuGQctUWRURdCYQ';
             const limit = 20;
             const url = query 
                 ? `https://tenor.googleapis.com/v2/search?q=${encodeURIComponent(query)}&key=${apiKey}&limit=${limit}&locale=ru_RU`
@@ -1944,9 +2043,9 @@ const App = {
             
             if (data.results && data.results.length > 0) {
                 resultsEl.innerHTML = data.results.map(gif => {
-                    const url = gif.media_formats.tinygif?.url || gif.media_formats.gif?.url;
-                    const fullUrl = gif.media_formats.gif?.url || url;
-                    return `<img src="${url}" data-full="${fullUrl}" alt="${gif.content_description || 'GIF'}" loading="lazy">`;
+                    const previewUrl = gif.media_formats.tinygif?.url || gif.media_formats.gif?.url;
+                    const fullUrl = gif.media_formats.gif?.url || previewUrl;
+                    return `<img src="${previewUrl}" data-full="${fullUrl}" alt="${gif.content_description || 'GIF'}" loading="lazy">`;
                 }).join('');
                 
                 // Add click handlers for GIFs
@@ -1972,7 +2071,6 @@ const App = {
         
         if (!channelId && !dmId) return;
         
-        // Send as image message
         if (dmId) {
             WS.send('dm_message', {
                 dmId: dmId,
