@@ -239,6 +239,7 @@
                     <button class="settings-tab" data-section="audio">Аудио</button>
                     <button class="settings-tab" data-section="appearance">Внешний вид</button>
                     <button class="settings-tab" data-section="flash-mode">Flash Mode</button>
+                    <button class="settings-tab admin-only" data-section="admin" id="admin-tab" style="display: none;">🛡️ Админ</button>
                     <div class="settings-divider"></div>
                     <button class="settings-tab danger" id="logout-btn">Выйти</button>
                 </div>
@@ -400,6 +401,22 @@
                         <h3>Flash Mode</h3>
                         <p>Режим ультра-минимализма для максимального фокуса на чате.</p>
                         <button class="btn btn-primary" id="toggle-flash-mode">Включить Flash Mode</button>
+                    </div>
+                    <div class="settings-section" data-section="admin">
+                        <h3>🛡️ Панель администратора</h3>
+                        <p style="color: var(--text-muted); margin-bottom: 20px;">Полный контроль над платформой</p>
+                        
+                        <div class="admin-section">
+                            <h4>Пользователи</h4>
+                            <button class="btn btn-secondary" id="admin-load-users">Загрузить всех пользователей</button>
+                            <div class="admin-list" id="admin-users-list"></div>
+                        </div>
+                        
+                        <div class="admin-section" style="margin-top: 24px;">
+                            <h4>Серверы</h4>
+                            <button class="btn btn-secondary" id="admin-load-servers">Загрузить все серверы</button>
+                            <div class="admin-list" id="admin-servers-list"></div>
+                        </div>
                     </div>
                 </div>
             </div>

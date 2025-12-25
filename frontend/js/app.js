@@ -1384,6 +1384,154 @@ const App = {
         Utils.$('#setting-glow').checked = settings.glow;
         Utils.$('#setting-dynamic-bg').checked = settings.dynamicBg;
         Utils.$('#toggle-flash-mode').textContent = settings.flashMode ? 'Выключить Flash Mode' : 'Включить Flash Mode';
+        
+        // Check admin status and show admin tab
+        this.checkAdminStatus();
+    },
+
+    // Check if current user is admin
+    async checkAdminStatus() {
+        try {
+            const response = await API.request('/admin/check');
+            const adminTab = Utils.$('#admin-tab');
+            if (response.isAdmin && adminTab) {
+                adminTab.style.display = 'block';
+                this.bindAdminEvents();
+            }
+        } catch (e) {
+            // Not admin or error - hide tab
+        }
+    },
+
+    // Bind admin panel events
+    bindAdminEvents() {
+        if (this.adminEventsBound) return;
+        this.adminEventsBound = true;
+        
+        Utils.$('#admin-load-users')?.addEventListener('click', () => this.loadAdminUsers());
+        Utils.$('#admin-load-servers')?.addEventListener('click', () => this.loadAdminServers());
+    },
+
+    // Load all users for admin
+    async loadAdminUsers() {
+        try {
+            const { users } = await API.request('/admin/users');
+            const list = Utils.$('#admin-users-list');
+            
+            list.innerHTML = users.map(user => {
+                const isVerified = user.tag === '#0001';
+                const verifiedBadge = isVerified ? '<svg class="verified-badge" viewBox="0 0 24 24" width="14" height="14"><path fill="#5865F2" d="M22.25 12c0-1.43-.88-2.67-2.19-3.34.46-1.39.2-2.9-.81-3.91s-2.52-1.27-3.91-.81c-.66-1.31-1.91-2.19-3.34-2.19s-2.67.88-3.34 2.19c-1.39-.46-2.9-.2-3.91.81s-1.27 2.52-.81 3.91c-1.31.67-2.19 1.91-2.19 3.34s.88 2.67 2.19 3.34c-.46 1.39-.2 2.9.81 3.91s2.52 1.27 3.91.81c.67 1.31 1.91 2.19 3.34 2.19s2.67-.88 3.34-2.19c1.39.46 2.9.2 3.91-.81s1.27-2.52.81-3.91c1.31-.67 2.19-1.91 2.19-3.34z"/><path fill="#fff" d="M10 15.17l-3.59-3.58L5 13l5 5 9-9-1.41-1.42z"/></svg>' : '';
+                const avatarStyle = user.avatar 
+                    ? `background-image: url(${user.avatar}); background-size: cover;`
+                    : `background: ${Utils.getUserColor(user.id)}`;
+                const avatarContent = user.avatar ? '' : Utils.getInitials(user.username);
+                
+                return `
+                    <div class="admin-item">
+                        <div class="admin-item-info">
+                            <div class="admin-item-avatar" style="${avatarStyle}">${avatarContent}</div>
+                            <div class="admin-item-details">
+                                <div class="admin-item-name">${Utils.escapeHtml(user.username)}${user.tag}${verifiedBadge}</div>
+                                <div class="admin-item-meta">${user.email || 'Email скрыт'}</div>
+                            </div>
+                        </div>
+                        <div class="admin-item-actions">
+                            <button class="admin-btn admin-btn-dm" onclick="App.adminOpenDM('${user.id}')">Написать</button>
+                            ${!isVerified ? `<button class="admin-btn admin-btn-delete" onclick="App.adminDeleteUser('${user.id}')">Удалить</button>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        } catch (e) {
+            console.error('Failed to load users:', e);
+        }
+    },
+
+    // Load all servers for admin
+    async loadAdminServers() {
+        try {
+            const { servers } = await API.request('/admin/servers');
+            const list = Utils.$('#admin-servers-list');
+            
+            list.innerHTML = servers.map(server => {
+                const avatarStyle = server.icon 
+                    ? `background-image: url(${server.icon}); background-size: cover;`
+                    : `background: var(--accent)`;
+                const avatarContent = server.icon ? '' : Utils.getInitials(server.name);
+                
+                return `
+                    <div class="admin-item">
+                        <div class="admin-item-info">
+                            <div class="admin-item-avatar" style="${avatarStyle}; border-radius: 12px;">${avatarContent}</div>
+                            <div class="admin-item-details">
+                                <div class="admin-item-name">${Utils.escapeHtml(server.name)}</div>
+                                <div class="admin-item-meta">Владелец: ${server.owner_username} • ${server.member_count} участников</div>
+                            </div>
+                        </div>
+                        <div class="admin-item-actions">
+                            <button class="admin-btn admin-btn-join" onclick="App.adminJoinServer('${server.id}')">Войти</button>
+                            <button class="admin-btn admin-btn-delete" onclick="App.adminDeleteServer('${server.id}')">Удалить</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        } catch (e) {
+            console.error('Failed to load servers:', e);
+        }
+    },
+
+    // Admin: Open DM with any user
+    async adminOpenDM(userId) {
+        try {
+            const { dm, user } = await API.request(`/admin/dm/${userId}`, { method: 'POST' });
+            this.hideModal('settings-modal');
+            this.openDM(userId);
+        } catch (e) {
+            console.error('Failed to open DM:', e);
+        }
+    },
+
+    // Admin: Delete user
+    async adminDeleteUser(userId) {
+        if (!confirm('Удалить этого пользователя? Это действие необратимо.')) return;
+        
+        try {
+            await API.request(`/admin/users/${userId}`, { method: 'DELETE' });
+            this.loadAdminUsers();
+        } catch (e) {
+            console.error('Failed to delete user:', e);
+            alert(e.message || 'Ошибка удаления');
+        }
+    },
+
+    // Admin: Join any server
+    async adminJoinServer(serverId) {
+        try {
+            const { server } = await API.request(`/admin/servers/${serverId}/join`, { method: 'POST' });
+            Store.state.servers.push(server);
+            this.renderServers();
+            this.hideModal('settings-modal');
+            this.selectServer(serverId);
+        } catch (e) {
+            console.error('Failed to join server:', e);
+            alert(e.message || 'Ошибка');
+        }
+    },
+
+    // Admin: Delete server
+    async adminDeleteServer(serverId) {
+        if (!confirm('Удалить этот сервер? Это действие необратимо.')) return;
+        
+        try {
+            await API.request(`/admin/servers/${serverId}`, { method: 'DELETE' });
+            this.loadAdminServers();
+            // Remove from local state if present
+            Store.state.servers = Store.state.servers.filter(s => s.id !== serverId);
+            this.renderServers();
+        } catch (e) {
+            console.error('Failed to delete server:', e);
+            alert(e.message || 'Ошибка удаления');
+        }
     },
 
     switchSettingsTab(section) {

@@ -102,6 +102,10 @@ const Components = {
         
         const encryptedIcon = msg.encrypted ? '<svg class="encrypted-icon" viewBox="0 0 24 24" width="12" height="12" title="Зашифровано"><path fill="currentColor" d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>' : '';
         
+        // Verified badge for #0001 users
+        const isVerified = msg.author?.tag === '#0001';
+        const verifiedBadge = isVerified ? '<svg class="verified-badge" viewBox="0 0 24 24" width="16" height="16" title="Верифицированный"><path fill="#5865F2" d="M22.25 12c0-1.43-.88-2.67-2.19-3.34.46-1.39.2-2.9-.81-3.91s-2.52-1.27-3.91-.81c-.66-1.31-1.91-2.19-3.34-2.19s-2.67.88-3.34 2.19c-1.39-.46-2.9-.2-3.91.81s-1.27 2.52-.81 3.91c-1.31.67-2.19 1.91-2.19 3.34s.88 2.67 2.19 3.34c-.46 1.39-.2 2.9.81 3.91s2.52 1.27 3.91.81c.67 1.31 1.91 2.19 3.34 2.19s2.67-.88 3.34-2.19c1.39.46 2.9.2 3.91-.81s1.27-2.52.81-3.91c1.31-.67 2.19-1.91 2.19-3.34z"/><path fill="#fff" d="M10 15.17l-3.59-3.58L5 13l5 5 9-9-1.41-1.42z"/></svg>' : '';
+        
         // Check if current user is mentioned
         const isMentioned = window.App && App.isUserMentioned(msg.content);
         const mentionedClass = isMentioned ? ' mentioned' : '';
@@ -133,6 +137,7 @@ const Components = {
                 <div class="message-content">
                     <div class="message-header">
                         <span class="message-author" style="color: ${authorColor}">${Utils.escapeHtml(msg.author?.username || 'Unknown')}</span>
+                        ${verifiedBadge}
                         ${encryptedIcon}
                         <span class="message-timestamp">${time}</span>
                     </div>
@@ -165,13 +170,17 @@ const Components = {
             : `background: ${Utils.getUserColor(member.id)}`;
         const avatarContent = member.avatar ? '' : initial;
         
+        // Verified badge for #0001 users
+        const isVerified = member.tag === '#0001';
+        const verifiedBadge = isVerified ? '<svg class="verified-badge" viewBox="0 0 24 24" width="14" height="14" title="Верифицированный"><path fill="#5865F2" d="M22.25 12c0-1.43-.88-2.67-2.19-3.34.46-1.39.2-2.9-.81-3.91s-2.52-1.27-3.91-.81c-.66-1.31-1.91-2.19-3.34-2.19s-2.67.88-3.34 2.19c-1.39-.46-2.9-.2-3.91.81s-1.27 2.52-.81 3.91c-1.31.67-2.19 1.91-2.19 3.34s.88 2.67 2.19 3.34c-.46 1.39-.2 2.9.81 3.91s2.52 1.27 3.91.81c.67 1.31 1.91 2.19 3.34 2.19s2.67-.88 3.34-2.19c1.39.46 2.9.2 3.91-.81s1.27-2.52.81-3.91c1.31-.67 2.19-1.91 2.19-3.34z"/><path fill="#fff" d="M10 15.17l-3.59-3.58L5 13l5 5 9-9-1.41-1.42z"/></svg>' : '';
+        
         return `
             <div class="member-item" data-user="${member.id}">
                 <div class="member-avatar" style="${avatarStyle}">
                     ${avatarContent}
                     <span class="status-dot ${member.status || 'offline'}"></span>
                 </div>
-                <span class="member-name">${Utils.escapeHtml(member.username)}</span>
+                <span class="member-name">${Utils.escapeHtml(member.username)}${verifiedBadge}</span>
             </div>
         `;
     },
@@ -182,12 +191,17 @@ const Components = {
         const avatarStyle = user.avatar 
             ? `background-image: url(${user.avatar}); background-size: cover;`
             : `background: ${Utils.getUserColor(user.id)}`;
+        
+        // Verified badge for #0001 users
+        const isVerified = user.tag === '#0001';
+        const verifiedBadge = isVerified ? '<svg class="verified-badge" viewBox="0 0 24 24" width="14" height="14" title="Верифицированный"><path fill="#5865F2" d="M22.25 12c0-1.43-.88-2.67-2.19-3.34.46-1.39.2-2.9-.81-3.91s-2.52-1.27-3.91-.81c-.66-1.31-1.91-2.19-3.34-2.19s-2.67.88-3.34 2.19c-1.39-.46-2.9-.2-3.91.81s-1.27 2.52-.81 3.91c-1.31.67-2.19 1.91-2.19 3.34s.88 2.67 2.19 3.34c-.46 1.39-.2 2.9.81 3.91s2.52 1.27 3.91.81c.67 1.31 1.91 2.19 3.34 2.19s2.67-.88 3.34-2.19c1.39.46 2.9.2 3.91-.81s1.27-2.52.81-3.91c1.31-.67 2.19-1.91 2.19-3.34z"/><path fill="#fff" d="M10 15.17l-3.59-3.58L5 13l5 5 9-9-1.41-1.42z"/></svg>' : '';
+        
         return `
             <div class="search-result-wrapper" data-user="${user.id}">
                 <div class="search-result search-result-item">
                     <div class="search-result-avatar" style="${avatarStyle}">${user.avatar ? '' : initial}</div>
                     <div class="search-result-info">
-                        <div class="search-result-name">${Utils.escapeHtml(user.username)}</div>
+                        <div class="search-result-name">${Utils.escapeHtml(user.username)}${verifiedBadge}</div>
                         <div class="search-result-tag">${user.tag}</div>
                     </div>
                 </div>

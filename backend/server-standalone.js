@@ -1928,6 +1928,168 @@ wss.on('connection', (ws) => {
     });
 });
 
+// ============ ADMIN SYSTEM ============
+// Check if user is admin (tag #0001)
+const isAdmin = (user) => user && user.tag === '#0001';
+
+// Admin middleware
+const adminOnly = (req, res, next) => {
+    if (!isAdmin(req.user)) {
+        return res.status(403).json({ error: true, message: 'Доступ запрещён' });
+    }
+    next();
+};
+
+// Get all users (admin only)
+app.get('/api/admin/users', authenticate, adminOnly, (req, res) => {
+    const users = Array.from(DB.users.values()).map(u => ({
+        id: u.id,
+        email: u.email,
+        username: u.username,
+        tag: u.tag,
+        avatar: u.avatar,
+        status: u.status,
+        created_at: u.created_at
+    }));
+    res.json({ users });
+});
+
+// Get all servers (admin only)
+app.get('/api/admin/servers', authenticate, adminOnly, (req, res) => {
+    const servers = Array.from(DB.servers.values()).map(s => {
+        const owner = DB.users.get(s.owner_id);
+        const memberCount = Array.from(DB.serverMembers.values()).filter(m => m.server_id === s.id).length;
+        return {
+            ...s,
+            owner_username: owner?.username || 'Unknown',
+            member_count: memberCount
+        };
+    });
+    res.json({ servers });
+});
+
+// Delete user (admin only)
+app.delete('/api/admin/users/:userId', authenticate, adminOnly, async (req, res) => {
+    const targetUser = DB.users.get(req.params.userId);
+    if (!targetUser) return res.status(404).json({ error: true, message: 'Пользователь не найден' });
+    if (targetUser.tag === '#0001') return res.status(403).json({ error: true, message: 'Нельзя удалить администратора' });
+    
+    // Remove from all servers
+    for (const [id, member] of DB.serverMembers.entries()) {
+        if (member.user_id === req.params.userId) {
+            DB.serverMembers.delete(id);
+        }
+    }
+    
+    // Remove friendships
+    for (const [id, friendship] of DB.friends.entries()) {
+        if (friendship.user1_id === req.params.userId || friendship.user2_id === req.params.userId) {
+            DB.friends.delete(id);
+        }
+    }
+    
+    // Remove friend requests
+    for (const [id, request] of DB.friendRequests.entries()) {
+        if (request.from_user_id === req.params.userId || request.to_user_id === req.params.userId) {
+            DB.friendRequests.delete(id);
+        }
+    }
+    
+    // Remove from secure database
+    try {
+        await Database.Accounts.delete(req.params.userId);
+    } catch (e) {
+        console.log('Could not delete from secure DB:', e.message);
+    }
+    
+    DB.users.delete(req.params.userId);
+    console.log(`✓ Админ удалил пользователя: ${targetUser.username}${targetUser.tag}`);
+    res.json({ success: true });
+});
+
+// Delete server (admin only)
+app.delete('/api/admin/servers/:serverId', authenticate, adminOnly, (req, res) => {
+    const server = DB.servers.get(req.params.serverId);
+    if (!server) return res.status(404).json({ error: true, message: 'Сервер не найден' });
+    
+    // Remove all channels
+    for (const [id, channel] of DB.channels.entries()) {
+        if (channel.server_id === req.params.serverId) {
+            DB.channels.delete(id);
+        }
+    }
+    
+    // Remove all members
+    for (const [id, member] of DB.serverMembers.entries()) {
+        if (member.server_id === req.params.serverId) {
+            DB.serverMembers.delete(id);
+        }
+    }
+    
+    // Remove all messages in server channels
+    for (const [id, message] of DB.messages.entries()) {
+        const channel = DB.channels.get(message.channel_id);
+        if (channel?.server_id === req.params.serverId) {
+            DB.messages.delete(id);
+        }
+    }
+    
+    DB.servers.delete(req.params.serverId);
+    console.log(`✓ Админ удалил сервер: ${server.name}`);
+    res.json({ success: true });
+});
+
+// Join any server (admin only)
+app.post('/api/admin/servers/:serverId/join', authenticate, adminOnly, (req, res) => {
+    const server = DB.servers.get(req.params.serverId);
+    if (!server) return res.status(404).json({ error: true, message: 'Сервер не найден' });
+    
+    // Check if already member
+    for (const member of DB.serverMembers.values()) {
+        if (member.server_id === req.params.serverId && member.user_id === req.user.id) {
+            return res.status(400).json({ error: true, message: 'Уже на сервере' });
+        }
+    }
+    
+    DB.serverMembers.set(uuidv4(), { server_id: req.params.serverId, user_id: req.user.id });
+    console.log(`✓ Админ присоединился к серверу: ${server.name}`);
+    res.json({ server });
+});
+
+// Send DM to any user (admin only) - bypass friend check
+app.post('/api/admin/dm/:userId', authenticate, adminOnly, (req, res) => {
+    const targetUser = DB.users.get(req.params.userId);
+    if (!targetUser) return res.status(404).json({ error: true, message: 'Пользователь не найден' });
+    
+    // Find or create DM channel
+    let dmChannel = null;
+    for (const dm of DB.dmChannels.values()) {
+        if ((dm.user1_id === req.user.id && dm.user2_id === req.params.userId) ||
+            (dm.user1_id === req.params.userId && dm.user2_id === req.user.id)) {
+            dmChannel = dm;
+            break;
+        }
+    }
+    
+    if (!dmChannel) {
+        const dmId = uuidv4();
+        dmChannel = {
+            id: dmId,
+            user1_id: req.user.id,
+            user2_id: req.params.userId,
+            created_at: new Date().toISOString()
+        };
+        DB.dmChannels.set(dmId, dmChannel);
+    }
+    
+    res.json({ dm: dmChannel, user: { id: targetUser.id, username: targetUser.username, tag: targetUser.tag, avatar: targetUser.avatar, status: targetUser.status } });
+});
+
+// Check if current user is admin
+app.get('/api/admin/check', authenticate, (req, res) => {
+    res.json({ isAdmin: isAdmin(req.user) });
+});
+
 // ============ HEALTH & STATIC ============
 app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', database: 'in-memory', users: DB.users.size, servers: DB.servers.size });

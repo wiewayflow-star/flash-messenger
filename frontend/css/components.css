@@ -842,6 +842,23 @@
     color: #ffffff;
 }
 
+/* Verified badge */
+.verified-badge {
+    display: inline-block;
+    vertical-align: middle;
+    margin-left: 4px;
+    flex-shrink: 0;
+}
+
+.message-header .verified-badge {
+    margin-top: -2px;
+}
+
+.member-name .verified-badge,
+.search-result-name .verified-badge {
+    margin-left: 4px;
+}
+
 .message-timestamp {
     font-size: 12px;
     color: var(--text-muted);
@@ -1040,6 +1057,109 @@
 .member-name {
     font-size: 14px;
     color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+}
+
+/* ============ ADMIN PANEL ============ */
+
+.admin-section h4 {
+    margin-bottom: 12px;
+    color: var(--text-primary);
+}
+
+.admin-list {
+    max-height: 300px;
+    overflow-y: auto;
+    margin-top: 12px;
+}
+
+.admin-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    background: var(--bg-primary);
+    border-radius: 8px;
+    margin-bottom: 8px;
+}
+
+.admin-item-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.admin-item-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 14px;
+    background-size: cover;
+    background-position: center;
+}
+
+.admin-item-details {
+    display: flex;
+    flex-direction: column;
+}
+
+.admin-item-name {
+    font-weight: 500;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.admin-item-meta {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.admin-item-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.admin-btn {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.admin-btn-join {
+    background: var(--success);
+    color: white;
+}
+
+.admin-btn-join:hover {
+    background: #3ba55d;
+}
+
+.admin-btn-dm {
+    background: var(--accent);
+    color: white;
+}
+
+.admin-btn-dm:hover {
+    background: var(--accent-light);
+}
+
+.admin-btn-delete {
+    background: var(--danger);
+    color: white;
+}
+
+.admin-btn-delete:hover {
+    background: #ed4245;
 }
 
 /* ============ MODALS ============ */
