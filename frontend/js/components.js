@@ -11,11 +11,12 @@ const Components = {
         if (isMuted) classes.push('muted');
         
         return `
-            <div class="${classes.join(' ')}" data-server="${server.id}" title="${Utils.escapeHtml(server.name)}">
+            <div class="${classes.join(' ')}" data-server="${server.id}">
                 ${server.icon 
                     ? `<img src="${server.icon}" alt="${Utils.escapeHtml(server.name)}">`
                     : `<span class="server-initial">${initial}</span>`
                 }
+                <span class="server-tooltip">${Utils.escapeHtml(server.name)}</span>
             </div>
         `;
     },
