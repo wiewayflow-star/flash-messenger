@@ -75,83 +75,34 @@ const Voice = {
 
     // Process audio stream with real noise suppression
     async processAudioStream(stream) {
-        if (!this.settings.noiseSuppression && !this.settings.echoCancellation) {
-            return stream; // No processing needed
-        }
-
-        try {
-            // Create audio context for processing
-            this.audioProcessingContext = new (window.AudioContext || window.webkitAudioContext)({
-                sampleRate: 48000
-            });
-
-            const source = this.audioProcessingContext.createMediaStreamSource(stream);
-            const destination = this.audioProcessingContext.createMediaStreamDestination();
-
-            // High-pass filter to remove low frequency rumble/hum (below 80Hz)
-            this.highpassFilter = this.audioProcessingContext.createBiquadFilter();
-            this.highpassFilter.type = 'highpass';
-            this.highpassFilter.frequency.value = 80;
-            this.highpassFilter.Q.value = 0.7;
-
-            // Low-pass filter to remove high frequency hiss (above 12kHz)
-            this.lowpassFilter = this.audioProcessingContext.createBiquadFilter();
-            this.lowpassFilter.type = 'lowpass';
-            this.lowpassFilter.frequency.value = 12000;
-            this.lowpassFilter.Q.value = 0.7;
-
-            // Compressor for dynamic range control and to reduce loud noises
-            this.compressor = this.audioProcessingContext.createDynamicsCompressor();
-            this.compressor.threshold.value = -24; // Start compressing at -24dB
-            this.compressor.knee.value = 12; // Soft knee
-            this.compressor.ratio.value = 4; // 4:1 compression ratio
-            this.compressor.attack.value = 0.003; // Fast attack (3ms)
-            this.compressor.release.value = 0.25; // 250ms release
-
-            // Gain node for volume control
-            const gainNode = this.audioProcessingContext.createGain();
-            gainNode.gain.value = this.settings.inputVolume / 100;
-
-            // Connect the chain: source -> highpass -> lowpass -> compressor -> gain -> destination
-            source.connect(this.highpassFilter);
-            this.highpassFilter.connect(this.lowpassFilter);
-            this.lowpassFilter.connect(this.compressor);
-            this.compressor.connect(gainNode);
-            gainNode.connect(destination);
-
-            // Store gain node for later adjustment
-            this.inputGainNode = gainNode;
-
-            console.log('[Voice] Audio processing chain created');
-            return destination.stream;
-
-        } catch (e) {
-            console.error('[Voice] Failed to create audio processing chain:', e);
-            return stream; // Return original stream on error
-        }
+        // Skip custom processing - use browser's built-in processing
+        // This is more reliable for WebRTC
+        return stream;
     },
 
     // Get processed audio stream with noise suppression
     async getProcessedAudioStream() {
-        const rawStream = await navigator.mediaDevices.getUserMedia({
+        const stream = await navigator.mediaDevices.getUserMedia({
             audio: {
                 deviceId: this.settings.inputDevice !== 'default' ? { exact: this.settings.inputDevice } : undefined,
                 noiseSuppression: this.settings.noiseSuppression,
                 echoCancellation: this.settings.echoCancellation,
                 autoGainControl: this.settings.autoGainControl,
                 sampleRate: 48000,
-                sampleSize: 16,
                 channelCount: 1
             },
             video: false
         });
         
-        // Store raw stream for cleanup
-        this.rawStream = rawStream;
+        console.log('[Voice] Got audio stream with', stream.getAudioTracks().length, 'audio tracks');
+        stream.getAudioTracks().forEach(track => {
+            console.log('[Voice] Audio track:', track.label, 'enabled:', track.enabled, 'muted:', track.muted);
+        });
         
-        // Apply audio processing
-        const processedStream = await this.processAudioStream(rawStream);
-        return processedStream;
+        // Store for cleanup
+        this.rawStream = stream;
+        
+        return stream;
     },
 
     // Cleanup audio resources
@@ -1187,14 +1138,17 @@ const Voice = {
             audioElement.autoplay = true;
             audioElement.playsInline = true;
             audioElement.id = `voice-audio-${peerId}`;
-            // Important: don't set muted initially
             document.body.appendChild(audioElement);
             peer.audioElement = audioElement;
+            console.log('[Voice] Created audio element for peer:', peerId);
         }
 
+        // Set stream and volume
         audioElement.srcObject = stream;
         audioElement.volume = this.settings.outputVolume / 100;
         audioElement.muted = this.isDeafened;
+        
+        console.log('[Voice] Audio element settings - volume:', audioElement.volume, 'muted:', audioElement.muted);
 
         // Force play (handle autoplay policy)
         audioElement.play().then(() => {
