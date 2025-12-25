@@ -296,7 +296,7 @@
     flex-direction: column;
     align-items: center;
     gap: 8px;
-    overflow-y: auto;
+    overflow: visible;
     animation: slideInLeft 0.3s ease;
 }
 
@@ -305,6 +305,14 @@
     flex-direction: column;
     align-items: center;
     gap: 8px;
+    overflow-y: auto;
+    overflow-x: visible;
+    max-height: calc(100vh - 200px);
+    scrollbar-width: none;
+}
+
+#server-list::-webkit-scrollbar {
+    display: none;
 }
 
 .server-icon {
