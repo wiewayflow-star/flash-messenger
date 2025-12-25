@@ -752,7 +752,7 @@
 
 .message-author {
     font-weight: 600;
-    color: var(--accent-light);
+    color: #ffffff;
 }
 
 .message-timestamp {
