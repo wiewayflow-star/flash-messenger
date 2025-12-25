@@ -494,9 +494,17 @@ const App = {
             }, 300);
         });
 
+        // Prevent picker from closing when clicking inside it
+        Utils.$('#emoji-picker')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+
         // Close emoji picker on outside click
-        document.addEventListener('click', () => {
-            Utils.$('#emoji-picker').classList.remove('show');
+        document.addEventListener('click', (e) => {
+            const picker = Utils.$('#emoji-picker');
+            if (picker && !picker.contains(e.target) && !e.target.closest('#emoji-btn')) {
+                picker.classList.remove('show');
+            }
         });
 
         // Search results click (event delegation)
