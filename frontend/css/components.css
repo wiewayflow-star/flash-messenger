@@ -367,6 +367,9 @@
     transition: opacity 0.1s ease, visibility 0.1s ease;
     z-index: 10000;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    width: max-content;
+    height: auto;
+    display: block;
 }
 
 .server-icon .server-tooltip::before {
