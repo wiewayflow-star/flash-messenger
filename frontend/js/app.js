@@ -499,11 +499,19 @@ const App = {
             this.switchSettingsTab('profile');
         });
 
+        // Status selector click to toggle dropdown
+        Utils.$('#status-current')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const dropdown = Utils.$('#status-dropdown');
+            dropdown?.classList.toggle('show');
+        });
+
         // Status options
         Utils.$$('.status-option').forEach(option => {
             option.addEventListener('click', () => {
                 const status = option.dataset.status;
                 this.setUserStatus(status);
+                Utils.$('#status-dropdown')?.classList.remove('show');
             });
         });
 
@@ -511,6 +519,13 @@ const App = {
         document.addEventListener('click', (e) => {
             const miniProfile = Utils.$('#user-mini-profile');
             const userInfo = Utils.$('#user-info-clickable');
+            const statusSelector = Utils.$('#mini-profile-status-selector');
+            
+            // Close status dropdown if clicking outside
+            if (statusSelector && !statusSelector.contains(e.target)) {
+                Utils.$('#status-dropdown')?.classList.remove('show');
+            }
+            
             if (miniProfile?.classList.contains('show') && 
                 !miniProfile.contains(e.target) && 
                 !userInfo?.contains(e.target)) {

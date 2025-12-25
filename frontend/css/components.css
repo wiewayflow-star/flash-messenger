@@ -2432,6 +2432,7 @@
     z-index: 10001;
 }
 
+.status-dropdown.show,
 .status-current:hover + .status-dropdown,
 .status-dropdown:hover {
     display: block;
