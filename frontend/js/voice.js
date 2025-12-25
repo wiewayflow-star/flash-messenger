@@ -2259,14 +2259,15 @@ const Voice = {
                 </div>
             </div>
             <div class="embedded-call-participants" id="call-participants">
-                ${participants.map(p => `
+                ${participants.map(p => {
+                    const hasAvatar = p.avatar && p.avatar.length > 0;
+                    return `
                     <div class="embedded-call-participant ${p.isMe ? 'me' : ''}" data-user-id="${p.id}" data-voice-user="${p.id}">
-                        <div class="embedded-call-avatar" style="${p.avatar ? `background-image: url(${p.avatar}); background-size: cover; background-position: center;` : `background: ${Utils.getUserColor(p.id)};`}">
-                            ${p.avatar ? '' : Utils.getInitials(p.username)}
+                        <div class="embedded-call-avatar" style="${hasAvatar ? `background-image: url(${p.avatar}); background-size: cover; background-position: center;` : `background: ${Utils.getUserColor(p.id)};`}">
+                            ${hasAvatar ? '' : Utils.getInitials(p.username)}
                         </div>
-                        <span class="embedded-call-participant-name">${Utils.escapeHtml(p.username)}</span>
                     </div>
-                `).join('')}
+                `}).join('')}
             </div>
             <div class="embedded-call-controls-bar" id="call-controls-bar">
                 <div class="call-controls-group">
