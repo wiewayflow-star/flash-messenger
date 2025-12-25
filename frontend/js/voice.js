@@ -1044,6 +1044,19 @@ const Voice = {
     // Handle incoming offer
     async handleOffer(fromUserId, offer) {
         console.log('[Voice] *** Received offer from:', fromUserId, '***');
+        console.log('[Voice] localStream exists:', !!this.localStream);
+        
+        // Ensure we have local stream before creating peer connection
+        if (!this.localStream) {
+            console.log('[Voice] No local stream, getting audio...');
+            try {
+                this.localStream = await this.getProcessedAudioStream();
+                console.log('[Voice] Got local stream');
+            } catch (e) {
+                console.error('[Voice] Failed to get audio stream:', e);
+                return;
+            }
+        }
 
         let peer = this.peers.get(fromUserId);
         if (!peer) {
@@ -2010,6 +2023,7 @@ const Voice = {
     // Handle call accepted by other party
     handleCallAccepted(payload) {
         console.log('[Voice] Call accepted:', payload);
+        console.log('[Voice] localStream exists:', !!this.localStream);
         
         // Play connect sound
         if (window.WS) WS.playCallConnectSound();
@@ -2039,8 +2053,19 @@ const Voice = {
         // Start timer
         this.startCallTimer();
         
-        // Create peer connection and send offer (caller initiates)
-        this.createPeerConnection(payload.userId, true);
+        // Ensure we have local stream before creating peer connection
+        if (!this.localStream) {
+            console.error('[Voice] No local stream when call accepted!');
+            this.getProcessedAudioStream().then(stream => {
+                this.localStream = stream;
+                this.createPeerConnection(payload.userId, true);
+            }).catch(e => {
+                console.error('[Voice] Failed to get audio:', e);
+            });
+        } else {
+            // Create peer connection and send offer (caller initiates)
+            this.createPeerConnection(payload.userId, true);
+        }
     },
 
     // Handle call rejected by other party
