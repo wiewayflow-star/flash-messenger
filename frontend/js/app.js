@@ -2066,22 +2066,20 @@ const App = {
 
     // Send GIF as message
     sendGif(url) {
-        const channelId = Store.state.currentChannel;
+        const channelId = Store.state.currentChannel?.id;
         const dmId = Store.state.currentDM;
         
         if (!channelId && !dmId) return;
         
         if (dmId) {
             WS.send('dm_message', {
-                dmId: dmId,
-                content: url,
-                type: 'gif'
+                recipientId: Store.state.currentDMUser?.id,
+                content: url
             });
         } else {
-            WS.send('message', {
-                channelId: channelId,
-                content: url,
-                type: 'gif'
+            // Send as regular message with GIF URL
+            API.messages.send(channelId, url).catch(e => {
+                console.error('Failed to send GIF:', e);
             });
         }
     },
