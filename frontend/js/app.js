@@ -436,7 +436,7 @@ const App = {
             });
         });
 
-        // Emoji picker
+        // Emoji & GIF picker
         Utils.$('#emoji-btn').addEventListener('click', (e) => {
             e.stopPropagation();
             const picker = Utils.$('#emoji-picker');
@@ -447,6 +447,19 @@ const App = {
             picker.style.right = (window.innerWidth - rect.right) + 'px';
         });
 
+        // Picker tabs
+        Utils.$$('.picker-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                Utils.$$('.picker-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                
+                const tabName = tab.dataset.tab;
+                Utils.$$('.picker-content').forEach(c => c.style.display = 'none');
+                Utils.$(`#picker-${tabName}`).style.display = 'block';
+            });
+        });
+
+        // Emoji click
         Utils.$$('.emoji-item').forEach(item => {
             item.addEventListener('click', () => {
                 const input = Utils.$('#message-input');
@@ -454,6 +467,31 @@ const App = {
                 input.focus();
                 Utils.$('#emoji-picker').classList.remove('show');
             });
+        });
+
+        // GIF category click
+        Utils.$$('.gif-category').forEach(cat => {
+            cat.addEventListener('click', () => {
+                const search = cat.dataset.search;
+                if (search === '') return; // Favorites
+                Utils.$('#gif-search').value = search === 'trending' ? '' : search;
+                this.searchGifs(search === 'trending' ? '' : search);
+            });
+        });
+
+        // GIF search
+        let gifSearchTimeout;
+        Utils.$('#gif-search')?.addEventListener('input', (e) => {
+            clearTimeout(gifSearchTimeout);
+            gifSearchTimeout = setTimeout(() => {
+                const query = e.target.value.trim();
+                if (query) {
+                    this.searchGifs(query);
+                } else {
+                    Utils.$('#gif-categories').style.display = 'grid';
+                    Utils.$('#gif-results').style.display = 'none';
+                }
+            }, 300);
         });
 
         // Close emoji picker on outside click
@@ -1860,6 +1898,72 @@ const App = {
     openSearchModal() {
         this.showModal('search-modal');
         Utils.$('#user-search-input')?.focus();
+    },
+
+    // Search GIFs from Tenor
+    async searchGifs(query) {
+        const resultsEl = Utils.$('#gif-results');
+        const categoriesEl = Utils.$('#gif-categories');
+        
+        categoriesEl.style.display = 'none';
+        resultsEl.style.display = 'grid';
+        resultsEl.innerHTML = '<div class="gif-loading">Загрузка...</div>';
+        
+        try {
+            // Tenor API (free tier)
+            const apiKey = 'AIzaSyAyimkuYQYF_FXVALexPuGQctUWRURdCYQ'; // Google's public Tenor API key
+            const limit = 20;
+            const url = query 
+                ? `https://tenor.googleapis.com/v2/search?q=${encodeURIComponent(query)}&key=${apiKey}&limit=${limit}&locale=ru_RU`
+                : `https://tenor.googleapis.com/v2/featured?key=${apiKey}&limit=${limit}&locale=ru_RU`;
+            
+            const response = await fetch(url);
+            const data = await response.json();
+            
+            if (data.results && data.results.length > 0) {
+                resultsEl.innerHTML = data.results.map(gif => {
+                    const url = gif.media_formats.tinygif?.url || gif.media_formats.gif?.url;
+                    const fullUrl = gif.media_formats.gif?.url || url;
+                    return `<img src="${url}" data-full="${fullUrl}" alt="${gif.content_description || 'GIF'}" loading="lazy">`;
+                }).join('');
+                
+                // Add click handlers for GIFs
+                resultsEl.querySelectorAll('img').forEach(img => {
+                    img.addEventListener('click', () => {
+                        this.sendGif(img.dataset.full);
+                        Utils.$('#emoji-picker').classList.remove('show');
+                    });
+                });
+            } else {
+                resultsEl.innerHTML = '<div class="gif-loading">Ничего не найдено</div>';
+            }
+        } catch (e) {
+            console.error('Failed to search GIFs:', e);
+            resultsEl.innerHTML = '<div class="gif-loading">Ошибка загрузки</div>';
+        }
+    },
+
+    // Send GIF as message
+    sendGif(url) {
+        const channelId = Store.state.currentChannel;
+        const dmId = Store.state.currentDM;
+        
+        if (!channelId && !dmId) return;
+        
+        // Send as image message
+        if (dmId) {
+            WS.send('dm_message', {
+                dmId: dmId,
+                content: url,
+                type: 'gif'
+            });
+        } else {
+            WS.send('message', {
+                channelId: channelId,
+                content: url,
+                type: 'gif'
+            });
+        }
     },
 
     // User Profile
