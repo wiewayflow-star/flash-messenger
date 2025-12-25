@@ -526,6 +526,45 @@
     gap: 4px;
 }
 
+/* Discord-style tooltip bubble */
+.icon-btn.has-tooltip {
+    position: relative;
+}
+
+.tooltip-bubble {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%) scale(0.9);
+    background: #18191c;
+    color: #dcddde;
+    padding: 8px 12px;
+    border-radius: 5px;
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.1s ease, transform 0.1s ease;
+    z-index: 10000;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.24);
+}
+
+.tooltip-bubble::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: #18191c;
+}
+
+.icon-btn.has-tooltip:hover .tooltip-bubble {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+}
+
 .icon-btn {
     width: 32px;
     height: 32px;
