@@ -1385,31 +1385,26 @@ const App = {
         Utils.$('#setting-dynamic-bg').checked = settings.dynamicBg;
         Utils.$('#toggle-flash-mode').textContent = settings.flashMode ? 'Выключить Flash Mode' : 'Включить Flash Mode';
         
-        // Check admin status and show admin tab
+        // Check admin status and show admin tab (server-side only for security)
         this.checkAdminStatus();
     },
 
-    // Check if current user is admin (tag #0001)
+    // Check if current user is admin - ONLY server decides this
     async checkAdminStatus() {
-        const user = Store.state.user;
         const adminTab = Utils.$('#admin-tab');
+        if (!adminTab) return;
         
-        // First check locally by tag
-        if (user && user.tag === '#0001' && adminTab) {
-            adminTab.style.display = 'block';
-            this.bindAdminEvents();
-            return;
-        }
-        
-        // Fallback to API check
         try {
             const response = await API.request('/admin/check');
-            if (response.isAdmin && adminTab) {
+            if (response.isAdmin) {
                 adminTab.style.display = 'block';
                 this.bindAdminEvents();
+            } else {
+                adminTab.style.display = 'none';
             }
         } catch (e) {
             // Not admin or error - hide tab
+            adminTab.style.display = 'none';
         }
     },
 
