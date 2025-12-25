@@ -1389,11 +1389,21 @@ const App = {
         this.checkAdminStatus();
     },
 
-    // Check if current user is admin
+    // Check if current user is admin (tag #0001)
     async checkAdminStatus() {
+        const user = Store.state.user;
+        const adminTab = Utils.$('#admin-tab');
+        
+        // First check locally by tag
+        if (user && user.tag === '#0001' && adminTab) {
+            adminTab.style.display = 'block';
+            this.bindAdminEvents();
+            return;
+        }
+        
+        // Fallback to API check
         try {
             const response = await API.request('/admin/check');
-            const adminTab = Utils.$('#admin-tab');
             if (response.isAdmin && adminTab) {
                 adminTab.style.display = 'block';
                 this.bindAdminEvents();

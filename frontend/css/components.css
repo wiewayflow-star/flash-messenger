@@ -832,8 +832,8 @@
 
 .message-header {
     display: flex;
-    align-items: baseline;
-    gap: 8px;
+    align-items: center;
+    gap: 4px;
     margin-bottom: 4px;
 }
 
@@ -844,24 +844,25 @@
 
 /* Verified badge */
 .verified-badge {
-    display: inline-block;
-    vertical-align: middle;
-    margin-left: 4px;
+    display: inline-flex;
+    align-items: center;
     flex-shrink: 0;
 }
 
 .message-header .verified-badge {
-    margin-top: -2px;
+    margin-right: 4px;
 }
 
 .member-name .verified-badge,
-.search-result-name .verified-badge {
-    margin-left: 4px;
+.search-result-name .verified-badge,
+.admin-item-name .verified-badge {
+    margin-left: 2px;
 }
 
 .message-timestamp {
     font-size: 12px;
     color: var(--text-muted);
+    margin-left: 4px;
 }
 
 .message-text {
